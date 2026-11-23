@@ -75,7 +75,8 @@ Every eval runs the **org** and **solo** modes on the same tasks. Logged coordin
 | `blog/multi-agent-rl.md`, `blog/build.mjs` | full writeup + standalone HTML renderer (`blog/multi-agent-rl.html`) in the sunnyguha.com blog style |
 | `scripts/stop_vllm.sh` | stops the vLLM server by pid (`pkill -f` would kill the calling shell) |
 | `Makefile`, `CLAUDE.md`, `requirements.txt` | common commands, agent/contributor guide, pinned versions of the shared venv |
-| `proxy.py`, `sandbox.py`, `tasks.py`, `serve_vllm.sh`, `sandbox_image/` | copied from `rl_harness`. Small changes: sandbox subdirectories, `exclude=` for messy-file kinds, venv path |
+| `../../common/proxy.py`, `../../common/sandbox_image/` | shared with `rl_harness` (identical in both experiments) |
+| `sandbox.py`, `tasks.py`, `serve_vllm.sh` | copied from `rl_harness`. Small changes: sandbox subdirectories, `exclude=` for messy-file kinds, venv path |
 
 ## Running
 

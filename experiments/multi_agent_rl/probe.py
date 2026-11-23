@@ -1,5 +1,7 @@
 """Base-model probe: run organisations (and the solo baseline) on test tasks without training and print
 per-bucket accuracy and coordination stats; with --show, print a few full organisation transcripts."""
+import sys
+from pathlib import Path
 import argparse
 import asyncio
 import json
@@ -8,6 +10,7 @@ from collections import Counter
 from transformers import AutoTokenizer
 
 from org_tasks import TEST_BUCKETS, make_org_test
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared proxy.py
 from proxy import CaptureProxy
 from rollout import evaluate, run_rollout
 from sandbox import Sandbox

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="13">
+  <title>One GRPO group: the same task attempted 8 times in the same harness. Each attempt is scored, and its advantage is its reward minus the group mean, divided by the group spread. Correct attempts are pushed up, wrong ones pushed down, and fewer tool calls earn slightly more.</title>
+  <style>
+    .m { font-family: "DejaVu Sans Mono", Menlo, monospace; font-size: 11px; fill: #1a1a1a; }
+    .s { font-size: 11px; fill: #52514e; }
+  </style>
+  <rect width="880" height="470" fill="#fdfdfd"/>
+  <text x="20" y="28" font-weight="bold" font-size="14" fill="#1a1a1a">One GRPO group: one task, one harness, 8 attempts</text>
+  <text x="20" y="48" class="s">reward r = 1 if correct (+ up to 0.1 for using fewer tool calls), else 0. Group mean = 0.669, spread σ = 0.518</text>
+  <rect x="20" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="30" y="90" class="s">attempt 1</text>
+  <text x="30" y="112" font-weight="bold" fill="#1baf7a">correct</text>
+  <text x="30" y="132" class="s">3 tool calls</text>
+  <text x="30" y="154" class="m">r = 1.087</text>
+  <rect x="48" y="251" width="40" height="41" fill="#1baf7a"/><text x="68" y="245" text-anchor="middle" class="m">+0.74</text>
+  <rect x="126" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#d64545" stroke-width="1.5"/>
+  <text x="136" y="90" class="s">attempt 2</text>
+  <text x="136" y="112" font-weight="bold" fill="#d64545">wrong</text>
+  <text x="136" y="132" class="s">6 tool calls</text>
+  <text x="136" y="154" class="m">r = 0</text>
+  <rect x="154" y="292" width="40" height="65" fill="#d64545"/><text x="174" y="372" text-anchor="middle" class="m">-1.18</text>
+  <rect x="232" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="242" y="90" class="s">attempt 3</text>
+  <text x="242" y="112" font-weight="bold" fill="#1baf7a">correct</text>
+  <text x="242" y="132" class="s">5 tool calls</text>
+  <text x="242" y="154" class="m">r = 1.062</text>
+  <rect x="260" y="254" width="40" height="38" fill="#1baf7a"/><text x="280" y="248" text-anchor="middle" class="m">+0.69</text>
+  <rect x="338" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#d64545" stroke-width="1.5"/>
+  <text x="348" y="90" class="s">attempt 4</text>
+  <text x="348" y="112" font-weight="bold" fill="#d64545">wrong</text>
+  <text x="348" y="132" class="s">turn limit</text>
+  <text x="348" y="154" class="m">r = 0</text>
+  <rect x="366" y="292" width="40" height="65" fill="#d64545"/><text x="386" y="372" text-anchor="middle" class="m">-1.18</text>
+  <rect x="444" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="454" y="90" class="s">attempt 5</text>
+  <text x="454" y="112" font-weight="bold" fill="#1baf7a">correct</text>
+  <text x="454" y="132" class="s">4 tool calls</text>
+  <text x="454" y="154" class="m">r = 1.075</text>
+  <rect x="472" y="253" width="40" height="39" fill="#1baf7a"/><text x="492" y="247" text-anchor="middle" class="m">+0.71</text>
+  <rect x="550" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="560" y="90" class="s">attempt 6</text>
+  <text x="560" y="112" font-weight="bold" fill="#1baf7a">correct</text>
+  <text x="560" y="132" class="s">7 tool calls</text>
+  <text x="560" y="154" class="m">r = 1.038</text>
+  <rect x="578" y="256" width="40" height="36" fill="#1baf7a"/><text x="598" y="250" text-anchor="middle" class="m">+0.65</text>
+  <rect x="656" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#d64545" stroke-width="1.5"/>
+  <text x="666" y="90" class="s">attempt 7</text>
+  <text x="666" y="112" font-weight="bold" fill="#d64545">wrong</text>
+  <text x="666" y="132" class="s">4 tool calls</text>
+  <text x="666" y="154" class="m">r = 0</text>
+  <rect x="684" y="292" width="40" height="65" fill="#d64545"/><text x="704" y="372" text-anchor="middle" class="m">-1.18</text>
+  <rect x="762" y="70" width="96" height="96" rx="5" fill="#fdfdfd" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="772" y="90" class="s">attempt 8</text>
+  <text x="772" y="112" font-weight="bold" fill="#1baf7a">correct</text>
+  <text x="772" y="132" class="s">3 tool calls</text>
+  <text x="772" y="154" class="m">r = 1.087</text>
+  <rect x="790" y="251" width="40" height="41" fill="#1baf7a"/><text x="810" y="245" text-anchor="middle" class="m">+0.74</text>
+  <line x1="20" y1="292" x2="858" y2="292" stroke="#52514e"/>
+  <text x="20" y="196" class="s">advantage A = (r − mean) / (σ + 0.05)</text>
+  <text x="20" y="212" class="s">above the line: made more likely · below: made less likely</text>
+  <line x1="20" y1="372" x2="860" y2="372" stroke="#e5e5e5"/>
+  <text x="20" y="398" font-weight="bold" fill="#1a1a1a">Two consequences</text>
+  <text x="20" y="420" class="s">· Every token the model wrote in an attempt gets that attempt's advantage. No learned critic, no per-step credit.</text>
+  <text x="20" y="438" class="s">· If all 8 attempts score the same (all right or all wrong), every advantage is 0 and the task teaches nothing.</text>
+  <text x="20" y="456" class="s">   That is why the training mix is 60% hard tasks, and why the small efficiency bonus matters: 3 calls (+0.74) beats 7 calls (+0.65).</text>
+</svg>

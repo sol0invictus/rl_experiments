@@ -17,6 +17,7 @@ from aiohttp import web
 from transformers import AutoTokenizer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "common"))
 import tasks as T  # noqa: E402
 from org_tasks import OrgTask, make_org_test, shard  # noqa: E402
 from proxy import CaptureProxy  # noqa: E402

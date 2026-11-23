@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 450" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="12">
+  <title>What the capture proxy turns an episode into. Tokens the model read are kept as context but not trained on; tokens the model sampled are trained on, using the token ids and log-probabilities recorded at sampling time. Append-only harnesses give one row per episode; pytools gives one row per model call.</title>
+  <style>
+    .m { font-family: "DejaVu Sans Mono", Menlo, monospace; font-size: 11px; }
+    .lab { font-size: 11px; fill: #1a1a1a; }
+    .s { font-size: 11px; fill: #52514e; }
+  </style>
+  <rect width="880" height="450" fill="#fdfdfd"/>
+
+  <text x="20" y="28" font-weight="bold" font-size="14" fill="#1a1a1a">One training row = the episode as token ids, with a mask</text>
+
+  <!-- legend -->
+  <rect x="20" y="44" width="16" height="12" fill="#e6e5e1" stroke="#b9b8b2"/>
+  <text x="42" y="54" class="s">the model <tspan font-weight="bold" fill="#1a1a1a">read</tspan> this (prompt, tool output): context only, no gradient</text>
+  <rect x="470" y="44" width="16" height="12" fill="#0b5fff"/>
+  <text x="492" y="54" class="s">the model <tspan font-weight="bold" fill="#1a1a1a">wrote</tspan> this: trained, using vLLM's logprobs</text>
+
+  <!-- append-only row -->
+  <text x="20" y="92" font-weight="bold" fill="#1a1a1a">shell, react (append-only history)</text>
+  <text x="20" y="108" class="s">every new request extends the last one token for token, so the whole episode is one row</text>
+  <g transform="translate(20,118)">
+    <rect x="0"   width="170" height="30" fill="#e6e5e1" stroke="#b9b8b2"/><text x="8" y="19" class="lab">system + task</text>
+    <rect x="170" width="120" height="30" fill="#0b5fff"/><text x="178" y="19" class="lab" fill="#fff">think + call</text>
+    <rect x="290" width="110" height="30" fill="#e6e5e1" stroke="#b9b8b2"/><text x="298" y="19" class="lab">tool output</text>
+    <rect x="400" width="120" height="30" fill="#0b5fff"/><text x="408" y="19" class="lab" fill="#fff">think + call</text>
+    <rect x="520" width="110" height="30" fill="#e6e5e1" stroke="#b9b8b2"/><text x="528" y="19" class="lab">tool output</text>
+    <rect x="630" width="210" height="30" fill="#0b5fff"/><text x="638" y="19" class="lab" fill="#fff">submit(answer="2019")</text>
+  </g>
+
+  <!-- pytools rows -->
+  <text x="20" y="186" font-weight="bold" fill="#1a1a1a">pytools (rewrites old tool outputs)</text>
+  <text x="20" y="202" class="s">the prompt changes behind the model's back, so each model call becomes its own row</text>
+  <g transform="translate(20,212)">
+    <rect x="0"   width="170" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="8" y="16" class="lab">system + task</text>
+    <rect x="170" width="120" height="24" fill="#0b5fff"/><text x="178" y="16" class="lab" fill="#fff">call 1</text>
+  </g>
+  <g transform="translate(20,240)">
+    <rect x="0"   width="170" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="8" y="16" class="lab">system + task</text>
+    <rect x="170" width="120" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="178" y="16" class="lab">call 1</text>
+    <rect x="290" width="110" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="298" y="16" class="lab">output 1</text>
+    <rect x="400" width="120" height="24" fill="#0b5fff"/><text x="408" y="16" class="lab" fill="#fff">call 2</text>
+  </g>
+  <g transform="translate(20,268)">
+    <rect x="0"   width="170" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="8" y="16" class="lab">system + task</text>
+    <rect x="170" width="120" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="178" y="16" class="lab">call 1</text>
+    <rect x="290" width="110" height="24" fill="#fdfdfd" stroke="#b9b8b2" stroke-dasharray="4 3"/><text x="298" y="16" class="lab" fill="#8a8984">[elided]</text>
+    <rect x="400" width="120" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="408" y="16" class="lab">call 2</text>
+    <rect x="520" width="110" height="24" fill="#e6e5e1" stroke="#b9b8b2"/><text x="528" y="16" class="lab">output 2</text>
+    <rect x="630" width="120" height="24" fill="#0b5fff"/><text x="638" y="16" class="lab" fill="#fff">call 3</text>
+  </g>
+
+  <!-- why tokens, not text -->
+  <line x1="20" y1="318" x2="860" y2="318" stroke="#e5e5e5"/>
+  <text x="20" y="342" font-weight="bold" fill="#1a1a1a">Why record ids instead of re-tokenizing the text later</text>
+  <text x="20" y="362" class="s">The same text can be split into tokens in more than one way. The model sampled the left split; running a tokenizer</text>
+  <text x="20" y="378" class="s">on the final text may give the right one. Training on that split rewards a sequence the model never produced.</text>
+  <g transform="translate(20,394)">
+    <text x="0" y="12" class="s">sampled by the model</text>
+    <rect x="140" y="0" width="44" height="22" fill="#0b5fff"/><text x="146" y="15" class="m" fill="#fff">" 12"</text>
+    <rect x="186" y="0" width="44" height="22" fill="#0b5fff"/><text x="194" y="15" class="m" fill="#fff">"34"</text>
+    <rect x="232" y="0" width="44" height="22" fill="#0b5fff"/><text x="240" y="15" class="m" fill="#fff">".5"</text>
+    <rect x="278" y="0" width="36" height="22" fill="#0b5fff"/><text x="286" y="15" class="m" fill="#fff">"0"</text>
+    <text x="340" y="15" font-size="14" fill="#52514e">≠</text>
+    <text x="372" y="12" class="s">re-tokenized text</text>
+    <rect x="490" y="0" width="64" height="22" fill="#fdfdfd" stroke="#eb6834" stroke-width="1.5"/><text x="497" y="15" class="m" fill="#1a1a1a">" 1234"</text>
+    <rect x="556" y="0" width="48" height="22" fill="#fdfdfd" stroke="#eb6834" stroke-width="1.5"/><text x="563" y="15" class="m" fill="#1a1a1a">".50"</text>
+    <text x="620" y="15" class="s">(illustrative split of " 1234.50")</text>
+  </g>
+</svg>

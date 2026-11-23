@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="What an agent harness is, why it matters for training, and a small experiment: GRPO + LoRA on LFM2.5-2.6B across three black-box harnesses on one RTX 3090 Ti. Held-out accuracy 66% → 82%." />
+    <title>Harness RL, Explained: One Small Model, Three Agent Loops, One GPU — Sunny Guha</title>
+    <link rel="stylesheet" href="katex/katex.min.css" />
+    <style>
+
+:root {
+  --fg: #1a1a1a;
+  --fg-muted: #666;
+  --bg: #fdfdfd;
+  --accent: #0b5fff;
+  --rule: #e5e5e5;
+  --code-bg: #f5f5f5;
+  --max-width: 52rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.6em 0 0.6em;
+}
+
+h1 { font-size: 1.8rem; margin-top: 0; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.1rem; }
+
+p { margin: 0.9em 0; }
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.4em auto;
+}
+
+figure { margin: 1.4em 0; }
+figcaption {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+  margin-top: 0.4em;
+}
+
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 1em 0;
+  padding: 0.2em 1em;
+  color: var(--fg-muted);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+pre {
+  background: var(--code-bg);
+  padding: 0.9em 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 2.5em 0;
+}
+
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.3em 0; }
+
+/* Site chrome */
+.site-header {
+  border-bottom: 1px solid var(--rule);
+  padding: 1.2rem 1.25rem;
+}
+.site-header-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.site-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--fg);
+}
+.site-nav { display: flex; gap: 1.2rem; font-size: 0.95rem; }
+.site-nav a { color: var(--fg-muted); }
+.site-nav a:hover, .site-nav a.is-active { color: var(--fg); text-decoration: none; }
+
+.site-footer {
+  border-top: 1px solid var(--rule);
+  padding: 1.2rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+  text-align: center;
+}
+
+/* Listings */
+.entry-list { list-style: none; padding: 0; margin: 1.5em 0; }
+.entry-list li {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 1rem;
+  padding: 0.6em 0;
+  border-bottom: 1px solid var(--rule);
+}
+.entry-list time { color: var(--fg-muted); font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+.entry-list .entry-desc { color: var(--fg-muted); font-size: 0.92rem; margin-top: 0.2em; }
+
+@media (max-width: 540px) {
+  .entry-list li { grid-template-columns: 1fr; gap: 0.1rem; }
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.6em 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+th, td {
+  text-align: left;
+  padding: 0.5em 0.7em;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+thead th {
+  border-bottom: 2px solid var(--rule);
+  font-weight: 600;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(even) { background: var(--code-bg); }
+
+/* Let wide tables scroll horizontally instead of overflowing the viewport */
+.table-wrap, table { max-width: 100%; }
+@media (max-width: 540px) {
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+/* KaTeX display blocks: keep them from overflowing on narrow screens */
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a href="https://www.sunnyguha.com/" class="site-title">Sunny Guha</a>
+        <nav class="site-nav">
+          <a href="https://www.sunnyguha.com/">About</a>
+          <a href="https://www.sunnyguha.com/blog" class="is-active">Blog</a>
+          <a href="https://www.sunnyguha.com/projects">Projects</a>
+          <a href="https://www.sunnyguha.com/publications">Publications</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <article>
+        <h1>Harness RL, Explained: One Small Model, Three Agent Loops, One GPU</h1>
+        <p style="color: var(--fg-muted); margin-top: -0.4em;">
+          <time datetime="2026-10-29T00:00:00.000Z">October 29, 2026</time>
+        </p>
+<p><em>A from-scratch explanation of harness RL, followed by a small, honest experiment on one consumer GPU.</em></p>
+<p><strong>Short version.</strong> I trained a 2.6B-parameter model with reinforcement learning while it worked inside three different agent programs (“harnesses”) at once. After 60 training steps (about 5 hours on one RTX 3090 Ti), accuracy on held-out data-analysis tasks went from <strong>66% to 82%</strong>. The biggest gain was on a data domain the model never saw during training. The more interesting findings are about what the training did <em>not</em> change, and why.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Base model</th>
+<th>After 60 RL steps</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All three harnesses</td>
+<td>66.1%</td>
+<td><strong>81.9%</strong></td>
+<td>+15.8 points (<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>3</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">p = 3\times10^{-7}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">7</span></span></span></span></span></span></span></span></span></span></span></span>)</td>
+</tr>
+<tr>
+<td>Question types never trained on</td>
+<td>62%</td>
+<td>75%</td>
+<td>+13</td>
+</tr>
+<tr>
+<td>Data domain never trained on</td>
+<td>65%</td>
+<td>87%</td>
+<td>+22</td>
+</tr>
+</tbody>
+</table>
+<p>If you already know what a harness is and how GRPO works, skip to <a href="#the-experiment">The experiment</a>.</p>
+<h2 id="part-1-what-is-a-harness">Part 1: What is a harness?</h2>
+<h3 id="a-language-model-alone-cant-do-anything">A language model alone can’t do anything</h3>
+<p>A language model does exactly one thing: it reads text and writes more text. It cannot open a file, run a program, or look anything up. When you watch Claude Code edit a repository or Codex run your tests, the model is not doing those things directly. A separate, ordinary program is doing them on the model’s behalf.</p>
+<p>That program is the <strong>harness</strong>. It sits between the model and the world, and it runs a loop:</p>
+<p><img src="./multi-harness-rl/fig_harness_loop.svg" alt="What a harness does" loading="lazy"></p>
+<ol>
+<li><strong>Build the prompt.</strong> The harness writes the text the model will read: rules (“you are a coding agent…”), the list of available tools, the task, and everything that has happened so far.</li>
+<li><strong>Parse the reply.</strong> The model’s reply is just text. The harness has to find the <em>action</em> in it: a structured tool call, a code block, or a final answer.</li>
+<li><strong>Run the action.</strong> The harness executes the command (here, in a Docker sandbox) and appends the output to the history.</li>
+<li><strong>Decide when to stop.</strong> Maybe the model called a <code>submit</code> tool. Maybe it wrote a magic line like <code>FINAL ANSWER:</code>. Maybe it ran out of turns.</li>
+</ol>
+<p>Then it goes back to step 1, until step 4 says stop. One trip around the loop is a <strong>turn</strong>, and the whole thing from task to answer is an <strong>episode</strong> (in RL terms, a <strong>rollout</strong>).</p>
+<h3 id="every-harness-does-these-four-jobs-differently">Every harness does these four jobs differently</h3>
+<p>Claude Code, Codex, OpenCode, and mini-SWE-agent all run this loop, but they disagree on almost every detail:</p>
+<ul>
+<li><strong>How actions are written.</strong> Some give the model a tool API, and the model emits structured calls like <code>shell(command="ls")</code>. Others have no tool API at all. The model writes a <code>```bash</code> block in plain text and the harness pulls it out with a regular expression.</li>
+<li><strong>What the model sees of the past.</strong> Some keep the full history. Others <em>compact</em> it: old tool outputs get replaced by a stub to save space, so the model has to remember (or re-read) what it saw.</li>
+<li><strong>How an episode ends.</strong> A <code>submit</code> tool, a <code>final_answer</code> tool, a magic string, or simply “a reply with no tool call”.</li>
+</ul>
+<p>Here is one task as it looks inside the three harnesses used in this experiment:</p>
+<p><img src="./multi-harness-rl/fig_three_harnesses.svg" alt="The same task inside three harnesses" loading="lazy"></p>
+<p>An analogy: the model is a skilled typist, and the harness is the keyboard layout. The skill transfers, but someone who has only ever typed on one layout will make a lot of mistakes on another, even though they “know” how to type.</p>
+<h3 id="why-this-matters-for-training">Why this matters for training</h3>
+<p>When you fine-tune a model to be a better agent, you have to run it inside <em>some</em> harness. Whatever you train it in, it learns two things together:</p>
+<ol>
+<li><strong>The task skill</strong>: inspect the data, write correct code, check the result.</li>
+<li><strong>The harness habits</strong>: this harness ends episodes with <code>submit</code>, that one wants <code>FINAL ANSWER:</code>, this one hides old outputs.</li>
+</ol>
+<p>Train in one harness, deploy in another, and the habits don’t match. The <a href="https://huggingface.co/spaces/FineEnvs/multi-harness-rl">FineEnvs multi-harness RL write-up</a> argues for a simple fix: <strong>train across several harnesses at once</strong>, and treat each one as a black box. Don’t modify the harness to make it trainable. Just record exactly what the model saw and what it wrote, and learn from that. That is what I mean by <em>harness RL</em>.</p>
+<h2 id="part-2-how-rl-works-here">Part 2: How RL works here</h2>
+<h3 id="the-idea-in-one-paragraph">The idea in one paragraph</h3>
+<p>Give the model a task. Let it try. Check whether the answer is right. Make the things it did on successful attempts more likely, and the things it did on failed attempts less likely. Repeat. Nobody writes example solutions. The only supervision is a checker that knows the right answer. For data questions that’s easy: the gold answer is computed with pandas, and the grader compares numbers (with a small tolerance) or strings.</p>
+<p>The reward for one episode is:</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>r</mi><mtext>  </mtext><mo>=</mo><mtext>  </mtext><mn mathvariant="double-struck">1</mn><mo stretchy="false">[</mo><mtext>correct</mtext><mo stretchy="false">]</mo><mo>⋅</mo><mo fence="false" stretchy="true" minsize="1.8em" maxsize="1.8em">(</mo><mn>1</mn><mo>+</mo><mn>0.1</mn><mo>⋅</mo><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">p</mi></mrow><mo fence="false" stretchy="true" minsize="1.2em" maxsize="1.2em">(</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mrow><mn>10</mn><mo>−</mo><msub><mi>n</mi><mtext>calls</mtext></msub></mrow><mn>8</mn></mfrac></mstyle><mo separator="true">,</mo><mtext> </mtext><mn>0</mn><mo separator="true">,</mo><mtext> </mtext><mn>1</mn><mo fence="false" stretchy="true" minsize="1.2em" maxsize="1.2em">)</mo><mo fence="false" stretchy="true" minsize="1.8em" maxsize="1.8em">)</mo></mrow><annotation encoding="application/x-tex">r \;=\; \mathbb{1}[\text{correct}] \cdot \Big(1 + 0.1 \cdot \mathrm{clip}\big(\tfrac{10 - n_{\text{calls}}}{8},\, 0,\, 1\big)\Big)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mopen">[</span><span class="mord text"><span class="mord">correct</span></span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.8em;vertical-align:-0.65em;"></span><span class="mord"><span class="delimsizing size2">(</span></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.8em;vertical-align:-0.65em;"></span><span class="mord"><span class="mord mathrm">clip</span></span><span class="mord"><span class="delimsizing size1">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.867em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">8</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.4159em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">10</span><span class="mbin mtight">−</span><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">calls</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mord"><span class="delimsizing size1">)</span></span><span class="mord"><span class="delimsizing size2">)</span></span></span></span></span></span>
+<p>That is 1 for a correct answer, plus a bonus of at most 0.1 for using fewer tool calls, and 0 for a wrong answer.</p>
+<h3 id="grpo-compare-attempts-with-each-other">GRPO: compare attempts with each other</h3>
+<p>The algorithm is <strong>GRPO</strong> (Group Relative Policy Optimization). Instead of training a second network to predict how good each attempt “should” be, GRPO runs the same task several times and compares the attempts with one another:</p>
+<p><img src="./multi-harness-rl/fig_grpo.svg" alt="One GRPO group" loading="lazy"></p>
+<p>Each attempt’s <strong>advantage</strong> is how much better it did than the group average, divided by the group’s spread: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mi>r</mi><mi>i</mi></msub><mo>−</mo><mover accent="true"><mi>r</mi><mo>ˉ</mo></mover><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mo stretchy="false">(</mo><msub><mi>σ</mi><mi>r</mi></msub><mo>+</mo><mn>0.05</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A_i = (r_i - \bar r)/(\sigma_r + 0.05)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.5678em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">r</span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1944em;"><span class="mord">ˉ</span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">/</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">σ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">r</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">0.05</span><span class="mclose">)</span></span></span></span>. Every token the model wrote in an attempt gets that attempt’s advantage. A positive advantage makes those tokens more likely, and a negative one makes them less likely.</p>
+<p>Two consequences follow, and both shape the experiment:</p>
+<ul>
+<li><strong>A group where every attempt scores the same teaches nothing.</strong> If all 8 are right (too easy) or all 8 are wrong (too hard), every advantage is zero. Useful tasks are the ones the model solves <em>sometimes</em>.</li>
+<li><strong>Small reward differences still count.</strong> Among correct attempts, the efficiency bonus is often the only thing that separates them, so the model is nudged toward shorter episodes.</li>
+</ul>
+<h3 id="lora-train-a-small-add-on-not-the-whole-model">LoRA: train a small add-on, not the whole model</h3>
+<p>Updating all 2.6 billion weights needs far more memory than one 24 GB card has once the inference server is also loaded. <strong>LoRA</strong> freezes the original weights and learns a small low-rank correction next to each weight matrix, <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>+</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mi>α</mi><mi>r</mi></mfrac></mstyle><mi>B</mi><mi>A</mi></mrow><annotation encoding="application/x-tex">W + \tfrac{\alpha}{r}BA</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">W</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0404em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6954em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">r</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0037em;">α</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal">A</span></span></span></span>. Here that is rank 32 on the attention and MLP projections: 40M trainable parameters, 1.5% of the model.</p>
+<h3 id="the-capture-proxy-what-makes-a-black-box-trainable">The capture proxy: what makes a black box trainable</h3>
+<p>The harnesses in this experiment are ordinary agent loops. Each one is given an OpenAI-compatible URL and nothing else, and none of them knows it is being trained. The trick is what sits behind that URL.</p>
+<p><img src="./multi-harness-rl/fig_system.svg" alt="System overview" loading="lazy"></p>
+<p>The harness sends chat messages to a <strong>capture proxy</strong>. The proxy converts the messages to <strong>token ids</strong> with the model’s chat template and sends those ids to vLLM (the inference server). For every call it records three things: the prompt ids, the ids the model sampled, and the probability of each sampled token. The trainer learns only from these records:</p>
+<p><img src="./multi-harness-rl/fig_tokens.svg" alt="What the proxy records" loading="lazy"></p>
+<p>Two details matter here.</p>
+<ol>
+<li><strong>Record ids, not text.</strong> A model writes token by token, and the same final text can usually be split into tokens in more than one way. If you rebuild the training data from the chat text afterwards, the tokenizer may pick a different split than the one the model sampled. You would then be training on a sequence the model never produced. Recording the ids at sampling time avoids this.</li>
+<li><strong>Harness-agnostic rows.</strong> When a harness only ever appends to its history (shell, react), each new request extends the previous one token for token, and the proxy stitches the whole episode into one training row. pytools rewrites its history (compaction), so each of its calls becomes its own row. The trainer never needs to know which kind of harness it is looking at.</li>
+</ol>
+<p><strong>The full update.</strong> The trainer computes each sampled token’s probability under the current weights, <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mi>θ</mi></msub></mrow><annotation encoding="application/x-tex">\pi_\theta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">θ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, and compares it with the probability vLLM recorded when sampling, <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>μ</mi></mrow><annotation encoding="application/x-tex">\mu</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">μ</span></span></span></span>. In theory these are the same model, but they run on different GPU kernels and disagree slightly. A truncated importance weight corrects for that:</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="script">L</mi><mtext>  </mtext><mo>=</mo><mtext>  </mtext><mo>−</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munder><mo>∑</mo><mi>t</mi></munder><mi>min</mi><mo>⁡</mo><mtext> ⁣</mtext><mo fence="false" stretchy="true" minsize="1.8em" maxsize="1.8em">(</mo><mfrac><mrow><msub><mi>π</mi><mi>θ</mi></msub><mo stretchy="false">(</mo><msub><mi>y</mi><mi>t</mi></msub><mo stretchy="false">)</mo></mrow><mrow><mi>μ</mi><mo stretchy="false">(</mo><msub><mi>y</mi><mi>t</mi></msub><mo stretchy="false">)</mo></mrow></mfrac><mo separator="true">,</mo><mtext> </mtext><mn>2</mn><mo fence="false" stretchy="true" minsize="1.8em" maxsize="1.8em">)</mo><mtext> </mtext><msub><mi>A</mi><mi>t</mi></msub><mtext> </mtext><mi>log</mi><mo>⁡</mo><msub><mi>π</mi><mi>θ</mi></msub><mo stretchy="false">(</mo><msub><mi>y</mi><mi>t</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathcal{L} \;=\; -\frac{1}{N}\sum_{t} \min\!\Big(\frac{\pi_\theta(y_t)}{\mu(y_t)},\, 2\Big)\, A_t \,\log \pi_\theta(y_t)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathcal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.677em;vertical-align:-1.25em;"></span><span class="mord">−</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.109em;">N</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.9em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">min</span><span class="mspace" style="margin-right:-0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="delimsizing size2">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">μ</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">θ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">2</span><span class="mord"><span class="delimsizing size2">)</span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">lo<span style="margin-right:0.0139em;">g</span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">θ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>
+<p>Here <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.109em;">N</span></span></span></span> is the number of model-written tokens in the batch. Tokens the model only read (prompts, tool outputs) are context, not training targets.</p>
+<h2 id="the-experiment">The experiment</h2>
+<h3 id="setup-on-one-gpu">Setup on one GPU</h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td>LiquidAI LFM2.5-2.6B, the model used in the FineEnvs write-up</td>
+</tr>
+<tr>
+<td>Hardware</td>
+<td>one RTX 3090 Ti (24 GB). vLLM holds 45% of the card; the trainer uses the rest. They take turns</td>
+</tr>
+<tr>
+<td>Harnesses</td>
+<td>shell (like Codex), pytools (like OpenCode / Claude Code), react (like mini-SWE-agent), all at most 10 turns</td>
+</tr>
+<tr>
+<td>One step</td>
+<td>12 tasks (4 per harness) × 8 attempts each = 96 rollouts</td>
+</tr>
+<tr>
+<td>Training</td>
+<td>60 steps, LoRA rank 32, AdamW, learning rate <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4\times10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span>, sampling temperature 1.0</td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td>every 20 steps, 120 fixed test tasks per harness (360 rollouts), temperature 0.7</td>
+</tr>
+<tr>
+<td>Wall clock</td>
+<td>about 5h20m</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Getting new weights into vLLM.</strong> After every step vLLM has to serve the updated model. The usual approach is to hot-load the LoRA adapter, but on this machine vLLM’s LoRA path for LFM2 decodes about <strong>15× slower</strong>. Instead, the trainer folds the adapter into the base weights and tells vLLM to reload them in place (about 3 seconds for 5 GB), then clears vLLM’s prefix cache, since the cached activations came from the old weights.</p>
+<h3 id="the-tasks">The tasks</h3>
+<p>Each task generates fresh CSV files (retail orders, HR records, or web sessions) and asks one question about them. Column names are randomized between a few variants, so the agent has to look at the files before writing code. Questions come from 46 named templates.</p>
+<p>My first version of this experiment trained only in pytools and went from 64% to 100%. That looked great until I checked: 46 of the 50 test questions reused training templates. The model had learned the templates, not the skill. So this version splits the test set three ways:</p>
+<table>
+<thead>
+<tr>
+<th>Test bucket</th>
+<th>What it measures</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>seen</strong> (40 tasks)</td>
+<td>training templates on fresh data</td>
+<td>“In which year were the most Support employees hired?”</td>
+</tr>
+<tr>
+<td><strong>tmpl</strong> (40)</td>
+<td>new question types on familiar data (7 held-out retail/HR templates)</td>
+<td>“Which month had the largest revenue increase over the previous month?”</td>
+</tr>
+<tr>
+<td><strong>domain</strong> (40)</td>
+<td>a dataset never seen in training (all 11 web-session templates)</td>
+<td>“Which plan has the highest average sessions per user, counting users with zero sessions?”</td>
+</tr>
+</tbody>
+</table>
+<p>Real data is messy, so medium tasks get messy files 50% of the time and hard tasks 90% of the time:</p>
+<table>
+<thead>
+<tr>
+<th>Mess</th>
+<th>What the agent sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dup</code></td>
+<td>exact duplicate rows (the question says to count each once)</td>
+</tr>
+<tr>
+<td><code>money</code></td>
+<td><code>"$1,234.50"</code> strings instead of numbers</td>
+</tr>
+<tr>
+<td><code>case</code></td>
+<td><code>"north"</code>, <code>"NORTH "</code>, <code>" North"</code> for the same label</td>
+</tr>
+<tr>
+<td><code>dates</code></td>
+<td><code>2024-03-05</code>, <code>03/05/2024</code>, <code>Mar 5, 2024</code> mixed in one column</td>
+</tr>
+<tr>
+<td><code>split</code></td>
+<td>the main table spread over <code>orders_part1.csv … orders_part4.csv</code></td>
+</tr>
+</tbody>
+</table>
+<p>Gold answers are always computed on the clean data. The training mix is 10% easy, 30% medium, 60% hard, because easy tasks mostly give groups where all 8 attempts succeed, and those carry no signal.</p>
+<h3 id="a-harness-the-model-couldnt-use">A harness the model couldn’t use</h3>
+<p>Before training, react scored <strong>0%</strong>, and the reason is worth knowing. react offers no tools, so the model is supposed to write a <code>```bash</code> block as text. LFM2.5 thinks about this correctly, and then does the other thing anyway:</p>
+<pre class="shiki github-light" style="background-color:#fff;color:#24292e; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;" tabindex="0" class="astro-code github-light"><code><span class="line"><span>...The error suggests I should write exactly one ```bash code block as plain text.</span></span>
+<span class="line"><span>Let me first try to read the file with a bash command.&#x3C;/think>&#x3C;|tool_call_start|>[bash(command='head -5 employees.csv')]&#x3C;|tool_call_end|></span></span></code></pre>
+<p>It <em>says</em> it should write a bash block, then emits its native tool-call syntax. A worked example in the prompt plus an explicit “you have no tool-calling functions” line didn’t help (0 of 30). The habit sits below what prompting can reach.</p>
+<p>RL can’t fix this from zero, because a group of 8 failures has no signal. So react got a fallback parser: a single <code>bash(command=...)</code> call written as text is accepted as an action. Everything else stays the same: no tool schema, outputs come back as user messages, and the episode ends with <code>FINAL ANSWER:</code>. With the fallback, base react scores 63%. I tracked how often the fallback fires, to see whether RL moves the model toward the intended format:</p>
+<table>
+<thead>
+<tr>
+<th>Eval step</th>
+<th>0</th>
+<th>20</th>
+<th>40</th>
+<th>60</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>react actions via the fallback</td>
+<td>85%</td>
+<td>84%</td>
+<td>81%</td>
+<td>79%</td>
+</tr>
+</tbody>
+</table>
+<p>It barely moves. Both formats earn the same reward, so nothing pushes the model toward the intended one. That turns out to be a theme.</p>
+<h2 id="results">Results</h2>
+<h3 id="accuracy-over-training">Accuracy over training</h3>
+<p><img src="./multi-harness-rl/fig_eval_curves.png" alt="Held-out accuracy over training" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>Harness</th>
+<th>Step 0</th>
+<th>20</th>
+<th>40</th>
+<th>60</th>
+<th>Fixed / broken (0 → 60)</th>
+<th><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>shell</td>
+<td>85.8%</td>
+<td>82.5%</td>
+<td>86.7%</td>
+<td>87.5%</td>
+<td>13 / 11</td>
+<td>0.84</td>
+</tr>
+<tr>
+<td>pytools</td>
+<td>49.2%</td>
+<td>82.5%</td>
+<td>85.8%</td>
+<td>81.7%</td>
+<td>47 / 8</td>
+<td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">8\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">8</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></td>
+</tr>
+<tr>
+<td>react</td>
+<td>63.3%</td>
+<td>67.5%</td>
+<td>82.5%</td>
+<td>76.7%</td>
+<td>30 / 14</td>
+<td>0.02</td>
+</tr>
+<tr>
+<td><strong>all</strong></td>
+<td><strong>66.1%</strong></td>
+<td><strong>77.5%</strong></td>
+<td><strong>85.0%</strong></td>
+<td><strong>81.9%</strong></td>
+<td><strong>90 / 33</strong></td>
+<td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3\times10^{-7}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">7</span></span></span></span></span></span></span></span></span></span></span></span></td>
+</tr>
+</tbody>
+</table>
+<p><em>How to read “fixed / broken”.</em> Each test task in each harness is run once at step 0 and once at step 60. “Fixed” means wrong before and right after; “broken” means the reverse. <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span> is a two-sided sign test on those counts. It asks: if training changed nothing, how likely is a split this lopsided?</p>
+<p><strong>pytools gains the most because it started worst.</strong> Before training, 32% of pytools episodes hit the 10-turn limit. The model kept exploring, re-reading files and re-running scripts, and never called <code>final_answer</code>. Compaction makes this worse: old outputs become “[earlier output elided]”, so the model re-reads what it already saw. RL fixes the cheap part first. Turn-limit failures drop from 32% to 4%, and tool calls per episode fall from 8.6 to 5.5.</p>
+<p><strong>shell doesn’t move, because there was little left to fix.</strong> Base shell already solved 98% of medium tasks and 100% of easy ones. Its remaining errors are on hard tasks (77% → 81%). With 120 test tasks, a 2-point change is noise.</p>
+<p><strong>The dip from step 40 to 60 is not a regression.</strong> Overall accuracy goes from 85.0% to 81.9%, but comparing the two steps task by task gives 28 fixed and 39 broken (<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.22</mn></mrow><annotation encoding="application/x-tex">p = 0.22</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.22</span></span></span></span>). Evaluation samples at temperature 0.7, so swings of a few points between evals are expected. The fair reading is that the run plateaued after about 40 steps.</p>
+<h3 id="did-it-learn-the-skill-or-memorize-the-questions">Did it learn the skill or memorize the questions?</h3>
+<table>
+<thead>
+<tr>
+<th>Bucket (all harnesses)</th>
+<th>Step 0</th>
+<th>Step 60</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>seen templates</td>
+<td>71%</td>
+<td>84%</td>
+<td>+13</td>
+</tr>
+<tr>
+<td>held-out templates</td>
+<td>62%</td>
+<td>75%</td>
+<td>+13</td>
+</tr>
+<tr>
+<td>held-out domain (web)</td>
+<td>65%</td>
+<td>87%</td>
+<td><strong>+22</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Question types the model never trained on improve as much as the ones it did, and the unseen web domain improves the most. That suggests RL mostly taught <em>process</em> rather than answers: look at the columns, clean the messy values, stop exploring and answer. The web tasks are mostly single-table lookups, which reward exactly that process. The held-out templates are harder multi-step questions and still sit 9 points below the seen ones.</p>
+<h3 id="which-tasks-improved">Which tasks improved?</h3>
+<p><img src="./multi-harness-rl/fig_breakdown.png" alt="Accuracy by difficulty and data mess" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>Slice</th>
+<th>n</th>
+<th>Step 0</th>
+<th>Step 60</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>easy / medium / hard</td>
+<td>24 / 126 / 210</td>
+<td>88 / 77 / 57%</td>
+<td>100 / 92 / 74%</td>
+</tr>
+<tr>
+<td>clean / 1 mess / 2 messes</td>
+<td>132 / 135 / 93</td>
+<td>77 / 60 / 59%</td>
+<td>91 / 78 / 75%</td>
+</tr>
+<tr>
+<td><code>case</code> labels</td>
+<td>63</td>
+<td>62%</td>
+<td>87%</td>
+</tr>
+<tr>
+<td><code>split</code> files</td>
+<td>54</td>
+<td>63%</td>
+<td>83%</td>
+</tr>
+<tr>
+<td><code>dates</code> mixed formats</td>
+<td>33</td>
+<td>55%</td>
+<td>76%</td>
+</tr>
+<tr>
+<td><code>money</code> strings</td>
+<td>90</td>
+<td>61%</td>
+<td>77%</td>
+</tr>
+<tr>
+<td><code>dup</code> rows</td>
+<td>81</td>
+<td>56%</td>
+<td><strong>63%</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Mess the model can see gets fixed.</strong> <code>"$1,234.50"</code> raises an error. <code>" NORTH"</code> shows up in a <code>value_counts()</code>. The part files are listed right in the prompt. <strong>Duplicate rows are different.</strong> They raise no error and produce a plausible wrong number, even though the question warns about them. They are the most persistent failure, and a realistic one.</p>
+<p>The hardest template is in the held-out domain: “which plan has the highest average sessions per user, counting users with zero sessions” (33% → 50%). It is a denominator trap. The answer needs a left join, and every shortcut gives a confident wrong answer.</p>
+<h3 id="what-changed-in-behavior">What changed in behavior?</h3>
+<p><img src="./multi-harness-rl/fig_efficiency.png" alt="How pytools episodes end, and tool calls per episode" loading="lazy"></p>
+<p>Tool calls per episode dropped in every harness: shell 4.3 → 3.4, react 4.3 → 3.4, pytools 8.6 → 5.5. The efficiency bonus is tiny, but inside a group of 8 attempts it is often the only thing separating two correct ones.</p>
+<p>The left panel shows something I didn’t expect. Between steps 40 and 60, pytools shifted from ending with the <code>final_answer</code> tool (76% → 42%) to <strong>replying in plain text</strong> (20% → 53%). In pytools, a text reply gets one nudge, and a second text reply ends the episode with that text as the answer. The grader scores both endings the same, so the reward can’t tell them apart. Ending with plain text is exactly what shell rewards: there, any reply without a tool call ends the episode. So this looks like a <strong>shell habit leaking into pytools</strong>, in a way the reward never sees.</p>
+<p>Same lesson as the react fallback: <strong>a harness shapes the model only through what the reward can see.</strong> If you care <em>how</em> the model behaves inside a harness, that has to be in the reward.</p>
+<h3 id="training-health">Training health</h3>
+<p><img src="./multi-harness-rl/fig_training.png" alt="Training curves" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rollouts</td>
+<td>60 steps × 96 = 5,760 rollouts, 22M tokens, 8.1M of them model-written (trained)</td>
+</tr>
+<tr>
+<td>Median step</td>
+<td>105 s of rollouts + 162 s of training + a few seconds of weight sync</td>
+</tr>
+<tr>
+<td>Peak trainer memory</td>
+<td>11.3 GB (vLLM holds another 45% of the card)</td>
+</tr>
+<tr>
+<td>vLLM vs trainer KL</td>
+<td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.8</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3.8\times10^{-4}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">3.8</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span> per token on average, never above <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">6\times10^{-4}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">6</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span></td>
+</tr>
+<tr>
+<td>Groups with no reward spread</td>
+<td>4% on average</td>
+</tr>
+</tbody>
+</table>
+<p>The KL row is the health check for the weight sync. If vLLM were serving stale or wrong weights, it would jump. It stays flat for the whole run.</p>
+<p>The dotted lines mark two <strong>infrastructure stalls</strong>. At step 43, vLLM received no requests for about 10 minutes, and 53 of the 96 rollouts hit the 600-second timeout (step 14 had a smaller one with 12). Those rollouts were scored as wrong answers, which skews that step’s update against whatever happened to be running. The run recovered by the next step. The fix is to drop infrastructure failures from the group instead of scoring them zero.</p>
+<h2 id="what-id-take-away">What I’d take away</h2>
+<ol>
+<li><strong>Harness RL works at hobby scale.</strong> One 3090 Ti, a 2.6B model, LoRA, and five hours took held-out accuracy from 66% to 82%. The unseen domain moved the most.</li>
+<li><strong>Record tokens, not text.</strong> The capture proxy is what makes black-box harnesses trainable, and it is about 250 lines.</li>
+<li><strong>Gains go where the model is weakest.</strong> pytools gained 32 points, react 13, shell 2. In a multi-harness run, the average hides which harness is learning.</li>
+<li><strong>The reward decides which habits survive.</strong> react kept its non-standard action syntax, and pytools drifted toward shell’s way of ending, because neither affected the reward.</li>
+<li><strong>Check the test split before celebrating.</strong> My first run’s 100% was mostly template memorization.</li>
+</ol>
+<h2 id="caveats">Caveats</h2>
+<ul>
+<li><strong>One seed, 120 test tasks per harness.</strong> Differences under about 8 points between single evals are within noise, which is why the main claims use paired sign tests.</li>
+<li><strong>react is react-with-a-fallback.</strong> Without the fallback parser it scores 0%.</li>
+<li><strong>Synthetic tasks.</strong> The CSV generator is mine. Real data is messy in ways I didn’t think of.</li>
+<li><strong>Two infrastructure stalls</strong> (steps 14 and 43) contaminated those steps’ updates.</li>
+</ul>
+<h2 id="reproducing">Reproducing</h2>
+<p>The code is in the <code>rl_harness</code> repository next to this post: <code>proxy.py</code> (capture proxy), <code>harnesses.py</code> (the three harnesses), <code>tasks.py</code> (task generator and grader), <code>sandbox.py</code> (Docker), and <code>train.py</code> (GRPO + LoRA). The run above is:</p>
+<pre class="shiki github-light" style="background-color:#fff;color:#24292e; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;" tabindex="0" class="astro-code github-light"><code><span class="line"><span style="color:#6A737D"># vLLM policy server on :8000, using 45% of the GPU</span></span>
+<span class="line"><span style="color:#6F42C1">./serve_vllm.sh</span></span>
+<span class="line"><span style="color:#6A737D"># train (needs the server up); evals at steps 0/20/40/60</span></span>
+<span class="line"><span style="color:#6F42C1">.venv-lfm/bin/python</span><span style="color:#032F62"> train.py</span><span style="color:#005CC5"> --run</span><span style="color:#032F62"> lfm_multi</span><span style="color:#005CC5"> --harnesses</span><span style="color:#032F62"> shell,pytools,react</span><span style="color:#005CC5"> \</span></span>
+<span class="line"><span style="color:#005CC5">    --steps</span><span style="color:#005CC5"> 60</span><span style="color:#005CC5"> --tasks-per-step</span><span style="color:#005CC5"> 12</span><span style="color:#005CC5"> --group</span><span style="color:#005CC5"> 8</span><span style="color:#005CC5"> --n-test</span><span style="color:#005CC5"> 40</span><span style="color:#005CC5"> --eval-every</span><span style="color:#005CC5"> 20</span></span>
+<span class="line"><span style="color:#6A737D"># figures + every number quoted here</span></span>
+<span class="line"><span style="color:#6F42C1">.venv-lfm/bin/python</span><span style="color:#032F62"> analysis/make_blog_figures.py</span><span style="color:#005CC5"> --run</span><span style="color:#032F62"> lfm_multi</span><span style="color:#005CC5"> --out</span><span style="color:#032F62"> blog/multi-harness-rl</span></span></code></pre>
+<p>All numbers in this post come from <code>analysis/results_lfm_multi.json</code>, which the figure script writes from the run’s logs.</p>
+      </article>
+      <hr />
+      <p><a href="https://www.sunnyguha.com/blog">← Back to blog</a></p>
+    </main>
+    <footer class="site-footer">
+      &copy; 2026 Sunny Guha
+    </footer>
+  </body>
+</html>

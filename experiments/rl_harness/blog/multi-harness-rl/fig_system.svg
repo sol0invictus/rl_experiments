@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 390" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="14">
+  <title>System overview: black-box harnesses talk to a capture proxy that forwards token ids to vLLM; the trainer learns from the captured tokens and pushes merged weights back into vLLM.</title>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52514e"/>
+    </marker>
+  </defs>
+  <rect width="900" height="400" fill="#fdfdfd"/>
+
+  <!-- harnesses -->
+  <text x="20" y="32" font-weight="bold" fill="#1a1a1a">Black-box harnesses</text>
+  <text x="20" y="50" font-size="12" fill="#666">each owns its own loop + prompt format</text>
+  <g>
+    <rect x="20" y="66" width="236" height="62" rx="6" fill="#fdfdfd" stroke="#2a78d6" stroke-width="2"/>
+    <text x="34" y="90" font-weight="bold" fill="#1a1a1a">shell</text>
+    <text x="34" y="110" font-size="12" fill="#52514e">Codex-like · bash + submit tools</text>
+    <rect x="20" y="140" width="236" height="62" rx="6" fill="#fdfdfd" stroke="#eb6834" stroke-width="2"/>
+    <text x="34" y="164" font-weight="bold" fill="#1a1a1a">pytools</text>
+    <text x="34" y="184" font-size="12" fill="#52514e">OpenCode-like · 4 tools, compaction</text>
+    <rect x="20" y="214" width="236" height="62" rx="6" fill="#fdfdfd" stroke="#1baf7a" stroke-width="2"/>
+    <text x="34" y="238" font-weight="bold" fill="#1a1a1a">react</text>
+    <text x="34" y="258" font-size="12" fill="#52514e">mini-SWE-like · no tool API, text</text>
+  </g>
+  <!-- sandbox -->
+  <rect x="20" y="304" width="236" height="56" rx="6" fill="#f3f2ee" stroke="#b9b8b2"/>
+  <text x="34" y="328" font-weight="bold" fill="#1a1a1a">Docker sandbox</text>
+  <text x="34" y="347" font-size="12" fill="#52514e">no network · CSVs per task</text>
+  <line x1="138" y1="278" x2="138" y2="300" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+
+  <!-- proxy -->
+  <rect x="316" y="110" width="252" height="122" rx="6" fill="#fdfdfd" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="332" y="136" font-weight="bold" fill="#1a1a1a">Capture proxy</text>
+  <text x="332" y="158" font-size="12" fill="#52514e">OpenAI chat API in front</text>
+  <text x="332" y="176" font-size="12" fill="#52514e">renders chat template → token ids</text>
+  <text x="332" y="194" font-size="12" fill="#52514e">records prompt ids, sampled ids,</text>
+  <text x="332" y="212" font-size="12" fill="#52514e">per-token logprobs per rollout</text>
+  <line x1="258" y1="171" x2="312" y2="171" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="262" y="162" font-size="11" fill="#666">chat JSON</text>
+
+  <!-- vLLM -->
+  <rect x="626" y="110" width="256" height="122" rx="6" fill="#fdfdfd" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="642" y="136" font-weight="bold" fill="#1a1a1a">vLLM (policy server)</text>
+  <text x="642" y="158" font-size="12" fill="#52514e">LFM2.5-2.6B · /v1/completions</text>
+  <text x="642" y="176" font-size="12" fill="#52514e">token ids in, token ids + logprobs out</text>
+  <text x="642" y="194" font-size="12" fill="#52514e">45% of one RTX 3090 Ti</text>
+  <line x1="570" y1="171" x2="622" y2="171" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="572" y="162" font-size="11" fill="#666">token ids</text>
+
+  <!-- trainer -->
+  <rect x="480" y="290" width="402" height="80" rx="6" fill="#fdfdfd" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="496" y="316" font-weight="bold" fill="#1a1a1a">Trainer (same GPU, takes turns with vLLM)</text>
+  <text x="496" y="337" font-size="12" fill="#52514e">GRPO advantages per task group · LoRA r=32 on attn + MLP</text>
+  <text x="496" y="355" font-size="12" fill="#52514e">truncated importance weights for vLLM/trainer mismatch</text>
+  <path d="M442,234 L442,330 L476,330" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="330" y="262" font-size="11" fill="#666">captured tokens +</text>
+  <text x="330" y="277" font-size="11" fill="#666">verifier rewards</text>
+  <path d="M760,288 L760,236" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="770" y="258" font-size="11" fill="#666">merge LoRA → reload</text>
+  <text x="770" y="273" font-size="11" fill="#666">weights in place</text>
+</svg>

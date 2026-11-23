@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="12">
+  <title>The same task inside three harnesses. shell uses native tool calls and a submit tool; pytools uses four tools and hides older tool outputs; react has no tool API, so the model writes bash blocks as plain text and ends with a FINAL ANSWER line.</title>
+  <style>
+    .m { font-family: "DejaVu Sans Mono", Menlo, monospace; font-size: 11px; fill: #1a1a1a; }
+    .r { font-size: 10px; fill: #666; letter-spacing: 0.04em; }
+    .h { font-size: 15px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 11px; fill: #52514e; }
+  </style>
+  <rect width="880" height="560" fill="#fdfdfd"/>
+
+  <!-- task banner -->
+  <rect x="20" y="14" width="840" height="46" rx="6" fill="#f3f2ee" stroke="#b9b8b2"/>
+  <text x="34" y="34" font-weight="bold" fill="#1a1a1a">Same task in every harness</text>
+  <text x="34" y="51" fill="#52514e">“In which year were the most Support employees hired?”  ·  files: employees.csv, departments.csv  ·  gold answer: 2019</text>
+
+  <!-- ===== shell ===== -->
+  <g transform="translate(20,76)">
+    <rect width="270" height="470" rx="6" fill="#fdfdfd" stroke="#2a78d6" stroke-width="2"/>
+    <text x="14" y="26" class="h">shell</text><text x="70" y="26" class="s">like Codex</text>
+    <text x="14" y="44" class="s">tools: shell(command), submit(answer)</text>
+
+    <text x="14" y="70" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="76" width="250" height="26" rx="4" fill="#eaf2fc" stroke="#2a78d6"/>
+    <text x="18" y="93" class="m">shell(command="head -3 *.csv")</text>
+
+    <text x="14" y="122" class="r">TOOL RESULT</text>
+    <rect x="10" y="128" width="250" height="40" rx="4" fill="#f3f2ee"/>
+    <text x="18" y="144" class="m">exit code 0</text>
+    <text x="18" y="159" class="m">employee_id,full_name,dept_id…</text>
+
+    <text x="14" y="188" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="194" width="250" height="40" rx="4" fill="#eaf2fc" stroke="#2a78d6"/>
+    <text x="18" y="210" class="m">shell(command="python3 -c</text>
+    <text x="18" y="225" class="m">  'import pandas as pd …'")</text>
+
+    <text x="14" y="254" class="r">TOOL RESULT</text>
+    <rect x="10" y="260" width="250" height="40" rx="4" fill="#f3f2ee"/>
+    <text x="18" y="276" class="m">exit code 0</text>
+    <text x="18" y="291" class="m">2019</text>
+
+    <text x="14" y="320" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="326" width="250" height="26" rx="4" fill="#eaf2fc" stroke="#2a78d6"/>
+    <text x="18" y="343" class="m">submit(answer="2019")</text>
+
+    <line x1="14" y1="372" x2="256" y2="372" stroke="#e5e5e5"/>
+    <text x="14" y="392" class="s"><tspan font-weight="bold" fill="#1a1a1a">History:</tspan> everything, append-only</text>
+    <text x="14" y="412" class="s"><tspan font-weight="bold" fill="#1a1a1a">Ends:</tspan> submit, or any reply</text>
+    <text x="14" y="428" class="s">without a tool call (that text</text>
+    <text x="14" y="444" class="s">becomes the answer)</text>
+  </g>
+
+  <!-- ===== pytools ===== -->
+  <g transform="translate(305,76)">
+    <rect width="270" height="470" rx="6" fill="#fdfdfd" stroke="#eb6834" stroke-width="2"/>
+    <text x="14" y="26" class="h">pytools</text><text x="86" y="26" class="s">like OpenCode / Claude Code</text>
+    <text x="14" y="44" class="s">4 native tools, compacted history</text>
+
+    <text x="14" y="70" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="76" width="250" height="26" rx="4" fill="#fdefe8" stroke="#eb6834"/>
+    <text x="18" y="93" class="m">list_files()</text>
+
+    <text x="14" y="122" class="r">TOOL RESULT (HIDDEN LATER)</text>
+    <rect x="10" y="128" width="250" height="26" rx="4" fill="#fdfdfd" stroke="#b9b8b2" stroke-dasharray="4 3"/>
+    <text x="18" y="145" class="m" fill="#8a8984">[earlier output elided …]</text>
+
+    <text x="14" y="174" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="180" width="250" height="26" rx="4" fill="#fdefe8" stroke="#eb6834"/>
+    <text x="18" y="197" class="m">read_file(path="employees.csv")</text>
+
+    <text x="14" y="226" class="r">TOOL RESULT</text>
+    <rect x="10" y="232" width="250" height="26" rx="4" fill="#f3f2ee"/>
+    <text x="18" y="249" class="m">employee_id,full_name,dept_id…</text>
+
+    <text x="14" y="278" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="284" width="250" height="26" rx="4" fill="#fdefe8" stroke="#eb6834"/>
+    <text x="18" y="301" class="m">run_python(code="…")  →  2019</text>
+
+    <text x="14" y="330" class="r">MODEL · TOOL CALL</text>
+    <rect x="10" y="336" width="250" height="26" rx="4" fill="#fdefe8" stroke="#eb6834"/>
+    <text x="18" y="353" class="m">final_answer(answer="2019")</text>
+
+    <line x1="14" y1="372" x2="256" y2="372" stroke="#e5e5e5"/>
+    <text x="14" y="392" class="s"><tspan font-weight="bold" fill="#1a1a1a">History:</tspan> compacted. Only the last</text>
+    <text x="14" y="408" class="s">two tool outputs are kept</text>
+    <text x="14" y="428" class="s"><tspan font-weight="bold" fill="#1a1a1a">Ends:</tspan> final_answer. A text reply gets</text>
+    <text x="14" y="444" class="s">one nudge; a second one ends it</text>
+  </g>
+
+  <!-- ===== react ===== -->
+  <g transform="translate(590,76)">
+    <rect width="270" height="470" rx="6" fill="#fdfdfd" stroke="#1baf7a" stroke-width="2"/>
+    <text x="14" y="26" class="h">react</text><text x="70" y="26" class="s">like mini-SWE-agent</text>
+    <text x="14" y="44" class="s">no tool API: actions are plain text</text>
+
+    <text x="14" y="70" class="r">MODEL · PLAIN TEXT</text>
+    <rect x="10" y="76" width="250" height="40" rx="4" fill="#e6f6f0" stroke="#1baf7a"/>
+    <text x="18" y="92" class="m">```bash</text>
+    <text x="18" y="107" class="m">head -3 employees.csv ```</text>
+
+    <text x="14" y="136" class="r">USER MESSAGE</text>
+    <rect x="10" y="142" width="250" height="40" rx="4" fill="#f3f2ee"/>
+    <text x="18" y="158" class="m">&lt;returncode&gt;0&lt;/returncode&gt;</text>
+    <text x="18" y="173" class="m">&lt;output&gt;employee_id,…</text>
+
+    <text x="14" y="202" class="r">MODEL · PLAIN TEXT</text>
+    <rect x="10" y="208" width="250" height="40" rx="4" fill="#e6f6f0" stroke="#1baf7a"/>
+    <text x="18" y="224" class="m">```bash</text>
+    <text x="18" y="239" class="m">python3 -c "…" ```</text>
+
+    <text x="14" y="268" class="r">USER MESSAGE</text>
+    <rect x="10" y="274" width="250" height="26" rx="4" fill="#f3f2ee"/>
+    <text x="18" y="291" class="m">&lt;output&gt;2019&lt;/output&gt;</text>
+
+    <text x="14" y="320" class="r">MODEL · PLAIN TEXT</text>
+    <rect x="10" y="326" width="250" height="26" rx="4" fill="#e6f6f0" stroke="#1baf7a"/>
+    <text x="18" y="343" class="m">FINAL ANSWER: 2019</text>
+
+    <line x1="14" y1="372" x2="256" y2="372" stroke="#e5e5e5"/>
+    <text x="14" y="392" class="s"><tspan font-weight="bold" fill="#1a1a1a">History:</tspan> everything, append-only;</text>
+    <text x="14" y="408" class="s">outputs arrive as user messages</text>
+    <text x="14" y="428" class="s"><tspan font-weight="bold" fill="#1a1a1a">Ends:</tspan> a line “FINAL ANSWER: …”</text>
+    <text x="14" y="444" class="s">with no code block</text>
+  </g>
+</svg>

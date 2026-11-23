@@ -1,0 +1,526 @@
+{
+ "eval_steps": [
+  0,
+  20,
+  40,
+  60
+ ],
+ "final_step": 60,
+ "eval": {
+  "0": {
+   "shell": {
+    "acc": 0.8583333333333333,
+    "acc_seen": 0.9,
+    "acc_tmpl": 0.85,
+    "acc_domain": 0.825,
+    "tool_calls": 4.25
+   },
+   "pytools": {
+    "acc": 0.49166666666666664,
+    "acc_seen": 0.475,
+    "acc_tmpl": 0.475,
+    "acc_domain": 0.525,
+    "tool_calls": 8.55
+   },
+   "react": {
+    "acc": 0.6333333333333333,
+    "acc_seen": 0.75,
+    "acc_tmpl": 0.55,
+    "acc_domain": 0.6,
+    "tool_calls": 4.341666666666667
+   },
+   "all": {
+    "acc": 0.6611111111111111,
+    "acc_seen": 0.7083333333333334,
+    "acc_tmpl": 0.625,
+    "acc_domain": 0.65,
+    "tool_calls": 5.713888888888889
+   }
+  },
+  "20": {
+   "shell": {
+    "acc": 0.825,
+    "acc_seen": 0.925,
+    "acc_tmpl": 0.75,
+    "acc_domain": 0.8,
+    "tool_calls": 4.141666666666667
+   },
+   "pytools": {
+    "acc": 0.825,
+    "acc_seen": 0.875,
+    "acc_tmpl": 0.825,
+    "acc_domain": 0.775,
+    "tool_calls": 5.908333333333333
+   },
+   "react": {
+    "acc": 0.675,
+    "acc_seen": 0.75,
+    "acc_tmpl": 0.55,
+    "acc_domain": 0.725,
+    "tool_calls": 4.35
+   },
+   "all": {
+    "acc": 0.775,
+    "acc_seen": 0.85,
+    "acc_tmpl": 0.7083333333333334,
+    "acc_domain": 0.7666666666666667,
+    "tool_calls": 4.8
+   }
+  },
+  "40": {
+   "shell": {
+    "acc": 0.8666666666666667,
+    "acc_seen": 0.925,
+    "acc_tmpl": 0.8,
+    "acc_domain": 0.875,
+    "tool_calls": 3.691666666666667
+   },
+   "pytools": {
+    "acc": 0.8583333333333333,
+    "acc_seen": 0.9,
+    "acc_tmpl": 0.85,
+    "acc_domain": 0.825,
+    "tool_calls": 5.716666666666667
+   },
+   "react": {
+    "acc": 0.825,
+    "acc_seen": 0.9,
+    "acc_tmpl": 0.7,
+    "acc_domain": 0.875,
+    "tool_calls": 3.9
+   },
+   "all": {
+    "acc": 0.85,
+    "acc_seen": 0.9083333333333333,
+    "acc_tmpl": 0.7833333333333333,
+    "acc_domain": 0.8583333333333333,
+    "tool_calls": 4.436111111111111
+   }
+  },
+  "60": {
+   "shell": {
+    "acc": 0.875,
+    "acc_seen": 0.95,
+    "acc_tmpl": 0.775,
+    "acc_domain": 0.9,
+    "tool_calls": 3.433333333333333
+   },
+   "pytools": {
+    "acc": 0.8166666666666667,
+    "acc_seen": 0.85,
+    "acc_tmpl": 0.775,
+    "acc_domain": 0.825,
+    "tool_calls": 5.458333333333333
+   },
+   "react": {
+    "acc": 0.7666666666666667,
+    "acc_seen": 0.725,
+    "acc_tmpl": 0.7,
+    "acc_domain": 0.875,
+    "tool_calls": 3.441666666666667
+   },
+   "all": {
+    "acc": 0.8194444444444444,
+    "acc_seen": 0.8416666666666667,
+    "acc_tmpl": 0.75,
+    "acc_domain": 0.8666666666666667,
+    "tool_calls": 4.111111111111111
+   }
+  }
+ },
+ "training": {
+  "steps": 60,
+  "stall_steps": {
+   "14": 12,
+   "43": 53
+  },
+  "kl_mean": 0.0003793214718841103,
+  "kl_max": 0.0006036929141807009,
+  "flat_mean": 0.04027777777777778,
+  "t_rollout_median": 105.43690729141235,
+  "t_train_median": 162.14794850349426,
+  "peak_mem_gb": 11.263710975646973,
+  "trainable_tokens_median": 133189
+ },
+ "breakdown": {
+  "Difficulty/easy": {
+   "base": 0.875,
+   "final": 1.0,
+   "n": 24
+  },
+  "Difficulty/medium": {
+   "base": 0.7698412698412699,
+   "final": 0.9206349206349206,
+   "n": 126
+  },
+  "Difficulty/hard": {
+   "base": 0.5714285714285714,
+   "final": 0.7380952380952381,
+   "n": 210
+  },
+  "Messy files/clean": {
+   "base": 0.7727272727272727,
+   "final": 0.9090909090909091,
+   "n": 132
+  },
+  "Messy files/1 kind of mess": {
+   "base": 0.6,
+   "final": 0.7777777777777778,
+   "n": 135
+  },
+  "Messy files/2 kinds of mess": {
+   "base": 0.5913978494623656,
+   "final": 0.7526881720430108,
+   "n": 93
+  },
+  "Tasks containing each mess kind/dup": {
+   "base": 0.5555555555555556,
+   "final": 0.6296296296296297,
+   "n": 81
+  },
+  "Tasks containing each mess kind/money": {
+   "base": 0.6111111111111112,
+   "final": 0.7666666666666667,
+   "n": 90
+  },
+  "Tasks containing each mess kind/case": {
+   "base": 0.6190476190476191,
+   "final": 0.873015873015873,
+   "n": 63
+  },
+  "Tasks containing each mess kind/dates": {
+   "base": 0.5454545454545454,
+   "final": 0.7575757575757576,
+   "n": 33
+  },
+  "Tasks containing each mess kind/split": {
+   "base": 0.6296296296296297,
+   "final": 0.8333333333333334,
+   "n": 54
+  }
+ },
+ "pytools_status": {
+  "0": {
+   "final_text": 31,
+   "max_turns": 38,
+   "submitted": 51
+  },
+  "20": {
+   "final_text": 37,
+   "max_turns": 7,
+   "submitted": 76
+  },
+  "40": {
+   "submitted": 91,
+   "final_text": 24,
+   "max_turns": 5
+  },
+  "60": {
+   "final_text": 64,
+   "submitted": 51,
+   "max_turns": 5
+  }
+ },
+ "paired": {
+  "shell": {
+   "fixed": 13,
+   "broke": 11,
+   "p": 0.8388197422027588,
+   "n": 120
+  },
+  "pytools": {
+   "fixed": 47,
+   "broke": 8,
+   "p": 8.067609591488889e-08,
+   "n": 120
+  },
+  "react": {
+   "fixed": 30,
+   "broke": 14,
+   "p": 0.022628841205914796,
+   "n": 120
+  },
+  "all": {
+   "fixed": 90,
+   "broke": 33,
+   "p": 2.744658521632981e-07,
+   "n": 360
+  }
+ },
+ "react_fallback": {
+  "0": 0.8471544715447155,
+  "20": 0.8387096774193549,
+  "40": 0.8118466898954704,
+  "60": 0.7873563218390804
+ },
+ "harness_x_difficulty": {
+  "0": {
+   "shell/hard": [
+    0.7714285714285715,
+    70
+   ],
+   "pytools/hard": [
+    0.44285714285714284,
+    70
+   ],
+   "react/hard": [
+    0.5,
+    70
+   ],
+   "shell/medium": [
+    0.9761904761904762,
+    42
+   ],
+   "pytools/medium": [
+    0.5476190476190477,
+    42
+   ],
+   "react/medium": [
+    0.7857142857142857,
+    42
+   ],
+   "shell/easy": [
+    1.0,
+    8
+   ],
+   "pytools/easy": [
+    0.625,
+    8
+   ],
+   "react/easy": [
+    1.0,
+    8
+   ]
+  },
+  "60": {
+   "shell/hard": [
+    0.8142857142857143,
+    70
+   ],
+   "pytools/hard": [
+    0.7285714285714285,
+    70
+   ],
+   "react/hard": [
+    0.6714285714285714,
+    70
+   ],
+   "shell/medium": [
+    0.9523809523809523,
+    42
+   ],
+   "pytools/medium": [
+    0.9285714285714286,
+    42
+   ],
+   "react/medium": [
+    0.8809523809523809,
+    42
+   ],
+   "shell/easy": [
+    1.0,
+    8
+   ],
+   "pytools/easy": [
+    1.0,
+    8
+   ],
+   "react/easy": [
+    1.0,
+    8
+   ]
+  }
+ },
+ "templates": {
+  "hr/top_hire_year_dept": {
+   "base": 1.0,
+   "final": 0.8333333333333334,
+   "n": 6
+  },
+  "retail/avg_qty_product": {
+   "base": 0.8888888888888888,
+   "final": 0.7777777777777778,
+   "n": 9
+  },
+  "hr/avg_rating": {
+   "base": 1.0,
+   "final": 1.0,
+   "n": 3
+  },
+  "hr/n_dept": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 6
+  },
+  "retail/cust_more_than_k": {
+   "base": 0.7777777777777778,
+   "final": 0.7777777777777778,
+   "n": 9
+  },
+  "retail/top_product_qty": {
+   "base": 1.0,
+   "final": 1.0,
+   "n": 6
+  },
+  "retail/pct_region_product": {
+   "base": 0.6666666666666666,
+   "final": 0.6666666666666666,
+   "n": 3
+  },
+  "hr/dept_avg_after": {
+   "base": 0.7333333333333333,
+   "final": 0.8666666666666667,
+   "n": 15
+  },
+  "hr/rating_gap": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 3
+  },
+  "retail/signup_before_rev": {
+   "base": 0.5555555555555556,
+   "final": 0.6666666666666666,
+   "n": 9
+  },
+  "retail/best_region_aov": {
+   "base": 0.5,
+   "final": 1.0,
+   "n": 6
+  },
+  "retail/rev_region": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 3
+  },
+  "hr/top_city_payroll": {
+   "base": 0.4444444444444444,
+   "final": 1.0,
+   "n": 9
+  },
+  "hr/avg_salary_dept": {
+   "base": 0.8888888888888888,
+   "final": 0.7777777777777778,
+   "n": 9
+  },
+  "retail/rev_segment": {
+   "base": 0.6666666666666666,
+   "final": 0.3333333333333333,
+   "n": 3
+  },
+  "retail/top_customer_rev": {
+   "base": 0.4444444444444444,
+   "final": 0.8888888888888888,
+   "n": 9
+  },
+  "retail/count_region": {
+   "base": 1.0,
+   "final": 1.0,
+   "n": 3
+  },
+  "retail/busiest_month": {
+   "base": 0.3333333333333333,
+   "final": 0.0,
+   "n": 3
+  },
+  "retail/segment_avg_qty": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 3
+  },
+  "hr/top_median_dept": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 3
+  },
+  "retail/rev_product_quarter": {
+   "base": 0.6666666666666666,
+   "final": 0.8333333333333334,
+   "n": 12
+  },
+  "hr/above_dept_avg": {
+   "base": 0.5087719298245614,
+   "final": 0.6140350877192983,
+   "n": 57
+  },
+  "hr/min_rating_year": {
+   "base": 1.0,
+   "final": 1.0,
+   "n": 3
+  },
+  "retail/orders_in_month": {
+   "base": 1.0,
+   "final": 1.0,
+   "n": 6
+  },
+  "hr/n_city": {
+   "base": 0.7777777777777778,
+   "final": 0.9629629629629629,
+   "n": 27
+  },
+  "retail/avg_distinct_products": {
+   "base": 0.8333333333333334,
+   "final": 0.8333333333333334,
+   "n": 6
+  },
+  "retail/mom_increase": {
+   "base": 0.3333333333333333,
+   "final": 0.5555555555555556,
+   "n": 9
+  },
+  "web/users_more_than_k_device": {
+   "base": 0.5833333333333334,
+   "final": 0.75,
+   "n": 12
+  },
+  "web/top_page": {
+   "base": 0.8333333333333334,
+   "final": 1.0,
+   "n": 6
+  },
+  "web/pct_users_page": {
+   "base": 0.7777777777777778,
+   "final": 1.0,
+   "n": 18
+  },
+  "web/plan_sessions_per_user": {
+   "base": 0.3333333333333333,
+   "final": 0.5,
+   "n": 12
+  },
+  "web/country_total_duration": {
+   "base": 0.4583333333333333,
+   "final": 0.7083333333333334,
+   "n": 24
+  },
+  "web/avg_duration_device": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 3
+  },
+  "web/pct_device": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 15
+  },
+  "web/busiest_hour": {
+   "base": 0.8888888888888888,
+   "final": 1.0,
+   "n": 18
+  },
+  "web/n_sessions_device": {
+   "base": 1.0,
+   "final": 1.0,
+   "n": 3
+  },
+  "web/max_duration": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 6
+  },
+  "web/n_users_plan": {
+   "base": 0.6666666666666666,
+   "final": 1.0,
+   "n": 3
+  }
+ }
+}

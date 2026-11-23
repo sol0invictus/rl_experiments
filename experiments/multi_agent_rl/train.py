@@ -7,6 +7,8 @@ submitted answer -> give every sampled token of every agent in the organisation 
 advantage -> policy-gradient update on the exact captured tokens -> push merged weights to vLLM.
 vLLM (separate process, serve_vllm.sh) and the trainer share the GPU and take turns.
 """
+import sys
+from pathlib import Path
 import argparse
 import asyncio
 import importlib.util
@@ -24,6 +26,7 @@ from safetensors.torch import load_file, save_file
 from torch.utils.checkpoint import checkpoint
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared proxy.py
 from proxy import CaptureProxy
 from org_tasks import TEST_BUCKETS, make_org_split, make_org_test
 from rollout import collective_samples, evaluate, run_rollout, summarize

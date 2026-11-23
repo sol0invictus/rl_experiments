@@ -1,0 +1,2 @@
+{"pytools": {"acc": 0.5, "tool_calls": 8.0, "tool_calls_solved": 3.5, "submitted": 0.5, "statuses": {"submitted": 2, "max_turns": 2}}, "all": {"acc": 0.5, "tool_calls": 8.0}, "step": 0, "time": 15.973473072052002, "model": "LiquidAI/LFM2.5-2.6B"}
+{"pytools": {"acc": 0.75, "tool_calls": 6.75, "tool_calls_solved": 4.0, "submitted": 0.75, "statuses": {"submitted": 3, "max_turns": 1}}, "all": {"acc": 0.75, "tool_calls": 6.75}, "step": 2, "time": 10.943784236907959, "model": "LiquidAI/LFM2.5-2.6B"}

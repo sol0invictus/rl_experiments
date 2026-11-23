@@ -15,7 +15,7 @@ smoke:                                 ## end-to-end with a scripted fake vLLM +
 	$(PY) tests/smoke_offline.py
 
 image:                                 ## build the sandbox image (python + pandas, no network)
-	docker build -t harness-sandbox:latest sandbox_image
+	docker build -t harness-sandbox:latest ../../common/sandbox_image
 
 serve:                                 ## vLLM policy server on :8000 (background)
 	mkdir -p runs && nohup ./serve_vllm.sh > runs/vllm.log 2>&1 & echo "vLLM starting, log: runs/vllm.log"

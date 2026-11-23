@@ -5,8 +5,9 @@ under WSL2. A lead agent with no data access coordinates per-site worker agents 
 are one shared policy. Design and rationale: `README.md`. **Current state and next steps: `STATUS.md`. Read it
 first when resuming, and update it at the end of a session** (results tables, what is running, open items).
 
-Sister project: `../rl_harness` (single-agent multi-harness RL). `proxy.py`, `sandbox.py`, `tasks.py`,
-`serve_vllm.sh` and most of `train.py` were copied from it. Keep fixes in sync when they apply to both.
+Sister project: `../rl_harness` (single-agent multi-harness RL). `sandbox.py`, `tasks.py`,
+`serve_vllm.sh` and most of `train.py` were copied from it; `proxy.py` and `sandbox_image/` are shared
+from `../../common/`. Keep fixes in sync when they apply to both.
 
 ## Commands
 
@@ -32,7 +33,7 @@ Python is `../rl_harness/.venv-lfm/bin/python` (vLLM 0.32, transformers 5.19, to
   `summarize` / `evaluate`.
 - `train.py`: policy, LoRA, `train_step`, weight sync to vLLM, main loop. It loads the model on import, so
   testable logic belongs in `rollout.py`.
-- `proxy.py`: capture proxy. Each agent gets its own rollout id `<rid>-<agent>`.
+- `../../common/proxy.py`: capture proxy (shared with rl_harness). Each agent gets its own rollout id `<rid>-<agent>`.
 - `runs/<run>/`: `config.json`, `metrics.jsonl` (per step), `eval.jsonl`, `eval_rollouts.jsonl`,
   `train_rollouts.jsonl`, `adapters/step_N/`, `policy/` (latest merged weights), `optimizer.pt`.
 
