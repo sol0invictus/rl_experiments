@@ -13,9 +13,12 @@ Test buckets (all disjoint from training seeds):
   domain   held-out domain (web), 2-3 sites
   wide     training templates, 4 sites (more workers than ever seen in training)
 """
+import sys
+from pathlib import Path
 import random
 from dataclasses import dataclass, field
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared modules (repo-root common/)
 import tasks as T
 
 SITE_NAMES = ["atlas", "boreal", "cobalt", "delta", "ember", "fjord"]

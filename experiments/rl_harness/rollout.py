@@ -1,9 +1,12 @@
 """Run harnesses on tasks through the capture proxy, grade them, and turn captures into training rows."""
+import sys
+from pathlib import Path
 import asyncio
 import uuid
 from collections import defaultdict
 
 from harnesses import HARNESSES, MAX_TURNS
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared modules (repo-root common/)
 from tasks import grade
 
 EFF_BONUS = 0.1

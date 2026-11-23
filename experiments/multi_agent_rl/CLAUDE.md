@@ -5,9 +5,9 @@ under WSL2. A lead agent with no data access coordinates per-site worker agents 
 are one shared policy. Design and rationale: `README.md`. **Current state and next steps: `STATUS.md`. Read it
 first when resuming, and update it at the end of a session** (results tables, what is running, open items).
 
-Sister project: `../rl_harness` (single-agent multi-harness RL). `sandbox.py`, `tasks.py`,
-`serve_vllm.sh` and most of `train.py` were copied from it; `proxy.py` and `sandbox_image/` are shared
-from `../../common/`. Keep fixes in sync when they apply to both.
+Sister project: `../rl_harness` (single-agent multi-harness RL). Code both use lives in `../../common/`:
+`policy.py` (model, LoRA, `train_step`, vLLM weight sync), `proxy.py`, `sandbox.py`, `tasks.py`, `serve_vllm.sh`,
+`stop_vllm.sh`, `sandbox_image/`, `blog/`. A change there affects both experiments; keep it backward compatible.
 
 ## Commands
 
@@ -21,8 +21,8 @@ make train RUN=org_all [ARGS="--steps 60"]          # background; log runs/$RUN.
 make table RUN=org_all                               # markdown results table from runs/$RUN/
 ```
 
-Python is `../rl_harness/.venv-lfm/bin/python` (vLLM 0.32, transformers 5.19, torch 2.13 cu130, see
-`requirements.txt`). There is no venv in this directory. The Docker image `harness-sandbox:latest` must exist
+Python is `../../.venv-lfm/bin/python` (vLLM 0.32, transformers 5.19, torch 2.13 cu130, see
+`../../requirements.txt`). There is no venv in this directory. The Docker image `harness-sandbox:latest` must exist
 (`make image`).
 
 ## Layout
@@ -31,7 +31,7 @@ Python is `../rl_harness/.venv-lfm/bin/python` (vLLM 0.32, transformers 5.19, to
 - `agents.py`: `org_harness` (lead + `Worker`s) and `solo_harness`. Harnesses only see an OpenAI URL.
 - `rollout.py`: `run_rollout`, `reward_fn`, `to_rows`, `tandem_repeat`, `collective_samples` (RLCR advantages),
   `summarize` / `evaluate`.
-- `train.py`: policy, LoRA, `train_step`, weight sync to vLLM, main loop. It loads the model on import, so
+- `train.py`: CLI + main loop; builds `common/policy.Policy` (LoRA, `train_step`, weight sync) on import, so
   testable logic belongs in `rollout.py`.
 - `../../common/proxy.py`: capture proxy (shared with rl_harness). Each agent gets its own rollout id `<rid>-<agent>`.
 - `runs/<run>/`: `config.json`, `metrics.jsonl` (per step), `eval.jsonl`, `eval_rollouts.jsonl`,
@@ -52,13 +52,13 @@ Python is `../rl_harness/.venv-lfm/bin/python` (vLLM 0.32, transformers 5.19, to
 ## Gotchas
 
 - `pkill -f <pattern>` and `pgrep -f` inside a Bash command match that shell itself and kill it. Use
-  `make stop-vllm` / `scripts/stop_vllm.sh`, which selects by `comm=python`.
+  `make stop-vllm` / `../../common/stop_vllm.sh`, which selects by `comm=python`.
 - The GPU is shared with other experiments (e.g. `/home/rlvr_experiments`). Check `nvidia-smi` before starting
   vLLM or training, and never kill another project's process without asking.
 - LFM2 has conv layers, so there is no sequence packing in the trainer (state would leak across rows); it uses SDPA.
 - vLLM's LoRA decode for LFM2 is ~15x slower here, so the default is `--sync merge` (merged weights +
-  `/collective_rpc reload_weights` + `/reset_prefix_cache`; needs `VLLM_SERVER_DEV_MODE=1`, set in `serve_vllm.sh`).
-- `serve_vllm.sh` passes `--generation-config vllm`: LFM's generation config adds repetition penalty and top-k,
+  `/collective_rpc reload_weights` + `/reset_prefix_cache`; needs `VLLM_SERVER_DEV_MODE=1`, set in `../../common/serve_vllm.sh`).
+- `common/serve_vllm.sh` passes `--generation-config vllm`: LFM's generation config adds repetition penalty and top-k,
   which bias RL sampling.
 - LFM2.5 always thinks and emits pythonic tool calls `<|tool_call_start|>[f(a=1)]<|tool_call_end|>`; `proxy.py`
   parses both these and Hermes-style calls.

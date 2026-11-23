@@ -67,16 +67,17 @@ Every eval runs the **org** and **solo** modes on the same tasks. Logged coordin
 | `org_tasks.py` | partitioned tasks (sharding, test buckets); `python org_tasks.py` self-checks that shards reassemble exactly |
 | `agents.py` | `org_harness` (lead + workers) and `solo_harness` |
 | `rollout.py` | rollouts, collective reward, `collective_samples` (RLCR advantages), tandem-repeat masking, eval summaries |
-| `train.py` | the `rl_harness` trainer with the multi-agent loop |
+| `train.py` | the multi-agent training loop; model, LoRA, `train_step` and vLLM sync come from `../../common/policy.py` |
 | `probe.py` | base-model eval without training; `--show N` prints full organisation transcripts |
 | `tests/smoke_offline.py` | no-GPU end-to-end test: a scripted fake vLLM drives real orgs through proxy, sandbox, grading, rows and advantages |
 | `analysis/summarize_run.py` | markdown tables for a run (eval per bucket, training curve) and `--compare` paired McNemar test between runs |
 | `analysis/make_blog_figures.py` | generates the data figures (`blog/multi-agent-rl/*.png`) and `analysis/results_org_small.json` from run logs |
-| `blog/multi-agent-rl.md`, `blog/build.mjs` | full writeup + standalone HTML renderer (`blog/multi-agent-rl.html`) in the sunnyguha.com blog style |
-| `scripts/stop_vllm.sh` | stops the vLLM server by pid (`pkill -f` would kill the calling shell) |
-| `Makefile`, `CLAUDE.md`, `requirements.txt` | common commands, agent/contributor guide, pinned versions of the shared venv |
-| `../../common/proxy.py`, `../../common/sandbox_image/` | shared with `rl_harness` (identical in both experiments) |
-| `sandbox.py`, `tasks.py`, `serve_vllm.sh` | copied from `rl_harness`. Small changes: sandbox subdirectories, `exclude=` for messy-file kinds, venv path |
+| `blog/multi-agent-rl.md` | full writeup; `make blog` renders `blog/multi-agent-rl.html` with `../../common/blog/build.mjs` |
+| `Makefile`, `CLAUDE.md` | common commands, agent/contributor guide |
+
+Shared with `rl_harness`, in `../../common/`: `policy.py` (LoRA policy, `train_step`, weight sync), `proxy.py`,
+`sandbox.py` (site subdirectories), `tasks.py` (`exclude=` for messy-file kinds), `serve_vllm.sh`, `stop_vllm.sh`,
+`sandbox_image/`, `blog/` (renderer, style, KaTeX). Pinned venv versions: `../../requirements.txt`.
 
 ## Running
 
@@ -84,10 +85,10 @@ Shortcuts are in the `Makefile` (`make test`, `make serve`, `make probe`, `make 
 `make ablation`, `make table RUN=...`). The equivalent raw commands:
 
 ```bash
-# venv is shared with rl_harness (vLLM 0.32 / transformers 5.19); the sandbox image is harness-sandbox:latest
-PY=../rl_harness/.venv-lfm/bin/python
+# venv is the repo-root .venv-lfm (vLLM 0.32 / transformers 5.19); the sandbox image is harness-sandbox:latest
+PY=../../.venv-lfm/bin/python
 $PY tests/smoke_offline.py                          # no GPU needed
-nohup ./serve_vllm.sh > runs/vllm.log 2>&1 &        # ~45% of the GPU
+MAX_SEQS=192 nohup ../../common/serve_vllm.sh > runs/vllm.log 2>&1 &   # ~45% of the GPU
 $PY probe.py --n 10                                 # base org vs solo, all buckets
 $PY probe.py --show 3                               # read what the lead and workers actually say
 nohup $PY train.py --run org_all --steps 60 --eval-every 20 > runs/org_all.log 2>&1 &

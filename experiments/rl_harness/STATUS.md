@@ -52,3 +52,11 @@ Infra stalls at steps 14 (12 timeouts) and 43 (53 timeouts) — timeouts were sc
 - vLLM server (serve_vllm.sh, port 8000) — still up, holds ~45% GPU. Find via `ps -eo pid,comm,args | grep vllm`
   (don't `pkill -f`, it kills the calling shell).
 - Astro preview on port 4329 (can be killed).
+
+## 2026-11-23: repo layout change
+Now `experiments/rl_harness/` in the combined repo. Shared code moved to `../../common/`: `policy.py`
+(model/LoRA/`train_step`/weight sync extracted from train.py), `proxy.py`, `sandbox.py`, `tasks.py` (multi_agent_rl's
+superset; `make_split`/`make_test` output verified identical), `serve_vllm.sh` (default `MAX_SEQS=128` as before),
+`stop_vllm.sh`, `sandbox_image/`, `blog/` (build.mjs now takes the post path: `make blog`). Venvs: `../../.venv-lfm`,
+`../../.venv`. New `Makefile` (serve / probe / train / figures / blog). Paths above are pre-merge. Full run weights
+(adapters, merged policy) were not moved: they are still in /home/experimetns/rl_harness/runs.

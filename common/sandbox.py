@@ -6,13 +6,14 @@ import subprocess
 import uuid
 
 IMAGE = "harness-sandbox:latest"
-HOST_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs", "workspaces")
+# one workspace root for every experiment (repo-root runs/workspaces, untracked)
+HOST_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "runs", "workspaces")
 CT_ROOT = "/workspaces"
 MAX_OUT = 2500
 
 
 class Sandbox:
-    def __init__(self, name="org-sbx", max_concurrent=16):
+    def __init__(self, name="sbx", max_concurrent=16):
         self.name = name
         self.sem = asyncio.Semaphore(max_concurrent)
         os.makedirs(HOST_ROOT, exist_ok=True)

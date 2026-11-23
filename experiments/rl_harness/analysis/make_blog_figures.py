@@ -6,6 +6,7 @@ Reads runs/<run>/{metrics,eval,eval_rollouts}.jsonl (and rebuilds the test set f
 recover each test task's difficulty and mess). Writes PNGs to --out and analysis/results_<run>.json with
 every number the post quotes, so the text and the figures come from the same place.
 """
+from pathlib import Path
 import argparse
 import json
 import math
@@ -19,6 +20,7 @@ import matplotlib.pyplot as plt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "common"))  # shared modules (repo-root common/)
 from tasks import make_test   # noqa: E402
 
 p = argparse.ArgumentParser()

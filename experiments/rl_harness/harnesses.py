@@ -19,7 +19,7 @@ import re
 
 from openai import AsyncOpenAI, BadRequestError
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared proxy.py
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared modules (repo-root common/)
 from proxy import _parse_pythonic
 
 MAX_TURNS = 10

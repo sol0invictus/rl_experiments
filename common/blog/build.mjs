@@ -1,14 +1,14 @@
-// Render multi-harness-rl.md to a standalone HTML page in the sunnyguha.com blog style.
+// Render an experiment's blog post (<slug>.md) to a standalone HTML page in the sunnyguha.com blog style.
 //
-//     NODE_PATH=/home/webpage/node_modules node blog/build.mjs
+//     NODE_PATH=/home/webpage/node_modules node common/blog/build.mjs experiments/<exp>/blog/<slug>.md
 //
 // Uses the same Markdown pipeline as the Astro site (GFM, smartypants, remark-math -> rehype-katex,
 // Shiki github-light with wrap) so the output matches /blog/<slug> there. style.css is a snapshot of
-// the site's src/styles/global.css. Writes multi-harness-rl.html next to the post, so the figure
-// paths (./multi-harness-rl/...) resolve unchanged.
+// the site's src/styles/global.css. Writes <slug>.html next to the post, so the figure paths
+// (./<slug>/...) resolve unchanged. style.css and katex/ (css + woff2 fonts) are shared by every post here.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(join(process.env.NODE_PATH || '/home/webpage/node_modules', 'x.js'));
@@ -25,11 +25,14 @@ const GithubSlugger = (await imp('github-slugger')).default;
 const { createHighlighter } = await imp('shiki');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const SLUG = 'multi-harness-rl';
+const POST = resolve(process.argv[2] || '');
+if (!POST.endsWith('.md')) throw new Error('usage: node common/blog/build.mjs path/to/<slug>.md');
+const POST_DIR = dirname(POST);
+const SLUG = basename(POST, '.md');
 const SITE = 'https://www.sunnyguha.com';
-const KATEX_CSS = 'katex/katex.min.css';   // copied from katex/dist (css + woff2 fonts)
+const KATEX_CSS = relative(POST_DIR, join(HERE, 'katex', 'katex.min.css'));   // relative to the html
 
-const src = readFileSync(join(HERE, `${SLUG}.md`), 'utf8');
+const src = readFileSync(POST, 'utf8');
 const [, fm, body] = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
 const meta = Object.fromEntries(fm.split('\n').map((l) => {
   const i = l.indexOf(':');
@@ -39,7 +42,6 @@ const meta = Object.fromEntries(fm.split('\n').map((l) => {
 const highlighter = await createHighlighter({ themes: ['github-light'], langs: ['bash', 'python', 'text'] });
 const text = (n) => (n.type === 'text' ? n.value : (n.children || []).map(text).join(''));
 
-// Astro-style heading ids and Shiki code blocks, as small rehype passes
 function rehypeAstroLike() {
   return (tree) => {
     const slugger = new GithubSlugger();
@@ -68,7 +70,9 @@ function rehypeAstroLike() {
 
 const html = String(await unified()
   .use(remarkParse).use(remarkGfm).use(remarkSmartypants).use(remarkMath)
-  .use(remarkRehype).use(rehypeKatex).use(rehypeAstroLike).use(rehypeStringify)
+  // allowDangerousHtml: pass inline HTML (e.g. <u>) through, as Astro does
+  .use(remarkRehype, { allowDangerousHtml: true }).use(rehypeKatex).use(rehypeAstroLike)
+  .use(rehypeStringify, { allowDangerousHtml: true })
   .process(body));
 
 const date = new Date(meta.date + 'T00:00:00Z');
@@ -116,5 +120,5 @@ ${html}
   </body>
 </html>
 `;
-writeFileSync(join(HERE, `${SLUG}.html`), page);
+writeFileSync(join(POST_DIR, `${SLUG}.html`), page);
 console.log(`wrote ${SLUG}.html (${(page.length / 1024).toFixed(0)} KB)`);

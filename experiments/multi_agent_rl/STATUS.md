@@ -92,3 +92,9 @@
   `ps -eo pid,comm,args | grep vllm` and kill by pid.
 - LFM2: no sequence packing (conv state leaks across packed rows), SDPA, merged-weight sync (vLLM LoRA decode
   for LFM2 is ~15x slower on this box), `--generation-config vllm`.
+
+## 2026-11-23: repo layout change
+Merged with rl_harness into one repo (`experiments/multi_agent_rl/`). Shared code moved to `../../common/`
+(`policy.py` = model/LoRA/`train_step`/weight sync extracted from train.py; `proxy.py`, `sandbox.py`, `tasks.py`,
+vLLM scripts, sandbox image, blog renderer). Venv: `../../.venv-lfm`. `make serve` sets `MAX_SEQS=192` as before.
+Sandbox workspaces now go to `../../runs/workspaces`. Commands in EXPERIMENT_LOG.md use the old paths.

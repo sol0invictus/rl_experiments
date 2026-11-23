@@ -1,5 +1,7 @@
 """Run organisations on tasks through the capture proxy, grade them, and turn every agent's captured
 calls into training rows that all share the organisation's collective advantage."""
+import sys
+from pathlib import Path
 import asyncio
 import uuid
 from collections import defaultdict
@@ -7,6 +9,7 @@ from collections import defaultdict
 import numpy as np
 
 from agents import LEAD_MAX_TURNS, SOLO_MAX_TURNS, WORKER_MAX_TURNS, org_harness, solo_harness
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared modules (repo-root common/)
 from tasks import grade
 
 EFF_BONUS = 0.1

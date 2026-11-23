@@ -9,7 +9,7 @@ from collections import Counter
 
 from transformers import AutoTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared proxy.py
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))  # shared modules (repo-root common/)
 from proxy import CaptureProxy
 from rollout import evaluate, run_rollout
 from sandbox import Sandbox
