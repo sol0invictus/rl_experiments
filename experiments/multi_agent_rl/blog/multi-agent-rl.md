@@ -285,7 +285,7 @@ This is a small experiment, so take the numbers with a grain of salt. Each mode 
 
 ## F. Code
 
-Everything is on GitHub at [sol0invictus/multi_agent_rl_demo](https://github.com/sol0invictus/multi_agent_rl_demo): the sharded task generator, the lead/worker/solo harnesses, the RLCR trainer (GRPO + LoRA on one GPU), the logs from both runs, and the scripts that rebuild every figure in this post. The README walks through the design, and `make test` runs an end-to-end check without a GPU.
+Everything is on GitHub at [sol0invictus/rl_experiments](https://github.com/sol0invictus/rl_experiments), under `experiments/multi_agent_rl/`: the sharded task generator (`org_tasks.py`), the lead/worker/solo harnesses (`agents.py`), the RLCR rollout and reward code (`rollout.py`), the training loop (`train.py`), the logs from both runs, and the scripts that rebuild every figure in this post. The pieces it shares with my other experiments, like the [multi-harness RL](https://www.sunnyguha.com/blog/multi-harness-rl) one, live in `common/`: the capture proxy, the Docker sandbox, the base task generator and grader, and the LoRA policy with its vLLM weight sync. The README walks through the design, and `make test` runs an end-to-end check without a GPU.
 
 ## G. References
 
@@ -301,9 +301,9 @@ Everything is on GitHub at [sol0invictus/multi_agent_rl_demo](https://github.com
 
 Running multi-agent RL with 24 concurrent organisations (72–96 agents per step) plus a live vLLM server and a PyTorch trainer on a single 24 GB GPU requires several systems choices that sit underneath the RL loop.
 
-### H.1 The token-capturing proxy (`proxy.py`) and append-only stitching (`rollout.py`)
+### H.1 The token-capturing proxy (`common/proxy.py`) and append-only stitching (`rollout.py`)
 
-The agent harnesses in `agents.py` never touch PyTorch or tokenizers. Each agent in rollout `rid` is handed its own OpenAI-compatible URL—`http://127.0.0.1:8100/r/<rid>-lead/v1`, `/r/<rid>-atlas/v1`, `/r/<rid>-boreal/v1`—pointing at `CaptureProxy` (`proxy.py`):
+The agent harnesses in `agents.py` never touch PyTorch or tokenizers. Each agent in rollout `rid` is handed its own OpenAI-compatible URL—`http://127.0.0.1:8100/r/<rid>-lead/v1`, `/r/<rid>-atlas/v1`, `/r/<rid>-boreal/v1`—pointing at `CaptureProxy` (`common/proxy.py`):
 
 ![System overview](./multi-agent-rl/fig_system.svg)
 
@@ -321,13 +321,13 @@ $$
 
 ### H.2 Three LFM2 and vLLM quirks on one GPU
 
-1. **Merged-weight sync.** Normally you would keep the base model in vLLM and hot-swap the 80 MB LoRA adapter each step (see [H.6](#h6-lora-parameterization-and-memory-budget-on-one-24-gb-gpu)). On this machine, vLLM's LoRA decode path for `LFM2.5-2.6B` is about **15× slower** than base-model decode. So after every gradient step, `publish_merged` folds the LoRA update $\frac{\alpha}{r}BA$ into the base weights in memory, writes `policy/model.safetensors`, and hits vLLM's `/collective_rpc` (`reload_weights`) plus `/reset_prefix_cache`. Reloading the 5 GB file takes ~2 seconds and keeps generation at full speed.
+1. **Merged-weight sync.** Normally you would keep the base model in vLLM and hot-swap the 80 MB LoRA adapter each step (see [H.6](#h6-lora-parameterization-and-memory-budget-on-one-24-gb-gpu)). On this machine, vLLM's LoRA decode path for `LFM2.5-2.6B` is about **15× slower** than base-model decode. So after every gradient step, `Policy.publish_merged` (`common/policy.py`) folds the LoRA update $\frac{\alpha}{r}BA$ into the base weights in memory, writes `policy/model.safetensors`, and hits vLLM's `/collective_rpc` (`reload_weights`) plus `/reset_prefix_cache`. Reloading the 5 GB file takes ~2 seconds and keeps generation at full speed.
 2. **No sequence packing across agents.** `LFM2.5-2.6B` is a hybrid architecture that interleaves gated short-convolution (`Lfm2ShortConv`) layers with SDPA attention layers. If you pack two different agents' rows into a single 1D sequence to save padding, the short-conv kernel leaks state across the boundary between agent 1 and agent 2. Every agent row is therefore forwarded as its own clean sequence with activation checkpointing.
 3. **Tandem-repeat masking (`tandem_repeat`).** In a multi-agent rollout, one worker can occasionally get stuck repeating a short phrase until it hits `max_tokens`, while the rest of the organisation still manages to guess or compute the right answer. Without protection, a positive collective advantage $A_g > 0$ would reinforce the degenerate loop. `to_rows` detects any call ending in $\ge 300$ tokens of a repeating $1\text{–}32$ token period and zeros out its loss mask.
 
-### H.3 Isolated per-site Docker sandboxes (`sandbox.py`)
+### H.3 Isolated per-site Docker workspaces (`common/sandbox.py`)
 
-For each organisation rollout, `sandbox.py` creates one host workspace with a subdirectory per site (`atlas/`, `boreal/`, …) and runs a single network-disabled Docker container (`harness-sandbox:latest`, `--network none`, `--memory 512m`, `--cpus 1`) with `Workspace.sub(site)` chdir'd into each worker's directory. Up to 16 containers run concurrently (`SANDBOX_CONCURRENCY = 16`), so parallel `ask` calls execute `python3 _script.py` simultaneously without seeing sibling sites' files.
+All code runs in one long-lived, network-disabled Docker container (`harness-sandbox:latest`, `--network none`). For each organisation rollout, `rollout.py` calls `Sandbox.new_workspace` once per site, so every site's files (`atlas/`, `boreal/`, …) get their own directory, and each worker's tools only run inside its own site's directory. A semaphore lets up to 32 commands run at once (`Sandbox(max_concurrent=32)` in `train.py`), so parallel `ask` calls execute `python3 _script.py` at the same time. The solo agent gets a single workspace with every site's files under `site/<file>`.
 
 ### H.4 Episode termination and the `final_text` shortcut (`agents.py`)
 
@@ -339,10 +339,10 @@ Why? In `agents.py`, if the lead replies without a tool call, `org_harness` imme
 
 ```python
 if not m.tool_calls:
-    return done(m.content, "final_text", t + 1)
+    return done(m.content, "final_text")
 ```
 
-Because `tasks.grade` extracts the last number from a plain-text response, stating *"Therefore, the total is **156**"* in plain text earns the **exact same reward** as calling `submit(answer="156")`—and saves one tool-call token sequence. On two test tasks (`o19900003` in `org_small` and `o20200002` in `org_small_lead`), however, the lead writes an intermediate plain-text summary (*"Now I have the data from all sites, let me compile the monthly counts…"*), expecting to call `submit` on the next turn—and the harness cuts the episode off mid-thought. Giving the lead a one-turn nudge when it writes plain text before `LEAD_MAX_TURNS` is an easy fix for the next run.
+Because `grade` in `common/tasks.py` extracts the last number from a plain-text response, stating *"Therefore, the total is **156**"* in plain text earns the **exact same reward** as calling `submit(answer="156")`—and saves one tool-call token sequence. On two test tasks (`o19900003` in `org_small` and `o20200002` in `org_small_lead`), however, the lead writes an intermediate plain-text summary (*"Now I have the data from all sites, let me compile the monthly counts…"*), expecting to call `submit` on the next turn—and the harness cuts the episode off mid-thought. Giving the lead a one-turn nudge when it writes plain text before `LEAD_MAX_TURNS` is an easy fix for the next run.
 
 ### H.5 Training health and vLLM-to-trainer KL verification
 
@@ -368,7 +368,7 @@ Notice two differences between the two training curves:
 
 In a single-agent run, one rollout is one conversation. In a multi-agent run, one rollout with $K=3$ sites is **four** separate multi-turn conversations (1 lead + 3 workers), totaling ~10,000–12,000 tokens per rollout, or ~250,000 tokens across a batch of 24 organisations. Meanwhile, the vLLM inference server is already sitting on 45% (~10.8 GB) of the RTX 3090 Ti's 24 GB of VRAM.
 
-Full-parameter fine-tuning of a 2.6B model in bfloat16 (~5.4 GB of weights + ~5.4 GB of gradients + ~21.6 GB of fp32 AdamW master weights, momentum, and variance) would blow past 24 GB immediately. Instead, `train.py` uses **LoRA** (Low-Rank Adaptation): freeze all $2.697\text{B}$ base weights $W_0 \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$ in bfloat16, and attach a trainable low-rank update to each linear projection:
+Full-parameter fine-tuning of a 2.6B model in bfloat16 (~5.4 GB of weights + ~5.4 GB of gradients + ~21.6 GB of fp32 AdamW master weights, momentum, and variance) would blow past 24 GB immediately. Instead, the shared policy in `common/policy.py` uses **LoRA** (Low-Rank Adaptation): freeze all $2.697\text{B}$ base weights $W_0 \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$ in bfloat16, and attach a trainable low-rank update to each linear projection:
 
 $$
 W \;=\; W_0 + \frac{\alpha}{r}\, B A, \qquad A \in \mathbb{R}^{r \times d_{\text{in}}},\; B \in \mathbb{R}^{d_{\text{out}} \times r}

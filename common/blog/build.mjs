@@ -8,7 +8,7 @@
 // (./<slug>/...) resolve unchanged. style.css and katex/ (css + woff2 fonts) are shared by every post here.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(join(process.env.NODE_PATH || '/home/webpage/node_modules', 'x.js'));
@@ -30,7 +30,16 @@ if (!POST.endsWith('.md')) throw new Error('usage: node common/blog/build.mjs pa
 const POST_DIR = dirname(POST);
 const SLUG = basename(POST, '.md');
 const SITE = 'https://www.sunnyguha.com';
-const KATEX_CSS = relative(POST_DIR, join(HERE, 'katex', 'katex.min.css'));   // relative to the html
+// The page is self-contained (KaTeX css + woff2 fonts and every figure inlined as data URIs), so it renders
+// the same wherever the .html is opened, including viewers that load a single file without its neighbours.
+const dataUri = (file, type) => `data:${type};base64,${readFileSync(file).toString('base64')}`;
+const KATEX_DIR = join(HERE, 'katex');
+const KATEX_CSS = readFileSync(join(KATEX_DIR, 'katex.min.css'), 'utf8')
+  .replace(/src:([^;}]*)/g, (_, srcs) => {
+    const woff2 = srcs.match(/url\((fonts\/[^)]+\.woff2)\)/);
+    return woff2 ? `src:url(${dataUri(join(KATEX_DIR, woff2[1]), 'font/woff2')}) format("woff2")` : `src:${srcs}`;
+  });
+const IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml', gif: 'image/gif' };
 
 const src = readFileSync(POST, 'utf8');
 const [, fm, body] = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
@@ -60,7 +69,11 @@ function rehypeAstroLike() {
           node.children[i] = pre;
           return;
         }
-        if (child.tagName === 'img') child.properties.loading = 'lazy';
+        if (child.tagName === 'img') {
+          const src = child.properties.src || '';
+          const type = IMG_TYPES[src.split('.').pop().toLowerCase()];
+          if (type && !/^(data:|https?:)/.test(src)) child.properties.src = dataUri(resolve(POST_DIR, src), type);
+        }
         walk(child);
       });
     };
@@ -86,8 +99,8 @@ const page = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="${meta.description.replace(/"/g, '&quot;')}" />
     <title>${meta.title} — Sunny Guha</title>
-    <link rel="stylesheet" href="${KATEX_CSS}" />
     <style>
+${KATEX_CSS}
 ${css}
     </style>
   </head>
